@@ -688,10 +688,14 @@ def obtener_estado_estaciones(session: Session = Depends(get_db)):
 def obtener_estado_sistema():
     import psutil
 
-    try:
-        sensores = psutil.sensors_temperatures()
-    except NotImplementedError:
+    leer_sensores = getattr(psutil, "sensors_temperatures", None)
+    if leer_sensores is None:
         sensores = {}
+    else:
+        try:
+            sensores = leer_sensores()
+        except NotImplementedError:
+            sensores = {}
     temperatura = next(
         (
             entrada.current
