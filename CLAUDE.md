@@ -26,6 +26,8 @@ Leer lo que corresponda a la tarea:
 | `docs/formato_datos/README.md` | Guía de los contratos v2, preguntas abiertas con otras estaciones y respuestas por defecto |
 | `docs/integracion/feat-b-integracion.md` | Rama de integración: tests, simulador y Docker para desarrollo y Pi |
 | `docs/avance/registro-dashboard.md` | Registro de avance del dashboard (rol C) y decisiones abiertas del frontend |
+| `docs/avance/registro-conexiones.md` | Registro de la jornada de conexiones: qué se hizo en cada fase de la red y configuración real |
+| `docs/avance/pendientes.md` | **Lo que queda por hacer**, por rol, con evidencia; se marca al resolver |
 
 Si el código y la documentación se contradicen, avisar al usuario antes de decidir cuál manda.
 
