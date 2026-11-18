@@ -1,16 +1,20 @@
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 
-class IngestaBase(BaseModel):
+class PayloadModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+
+class IngestaBase(PayloadModel):
     id_lote: str = Field(..., min_length=1, description="Identificador del lote")
     timestamp: AwareDatetime = Field(
         ..., description="Fecha y hora de la lectura, con zona horaria"
     )
 
 
-class E1Data(BaseModel):
+class E1Data(PayloadModel):
     validez_imagen: bool
     estado_captura: Literal["aceptada", "repetir", "revision"]
     posicion_correcta: bool
@@ -23,7 +27,7 @@ class E1Payload(IngestaBase):
     datos: E1Data
 
 
-class E2Fruta(BaseModel):
+class E2Fruta(PayloadModel):
     id_fruta: str = Field(..., min_length=1)
     calidad_visual: Literal[
         "alta", "media", "baja", "defectos_visibles", "revision"
@@ -40,7 +44,7 @@ class E2Payload(IngestaBase):
     frutas: list[E2Fruta]
 
 
-class E3Fruta(BaseModel):
+class E3Fruta(PayloadModel):
     id_fruta: str = Field(..., min_length=1)
     diametro_mm: float = Field(
         ..., gt=0, json_schema_extra={"example": 40}
@@ -54,7 +58,7 @@ class E3Payload(IngestaBase):
     frutas: list[E3Fruta]
 
 
-class E4Fruta(BaseModel):
+class E4Fruta(PayloadModel):
     id_fruta: str = Field(..., min_length=1)
     categoria_final: Literal[
         "exportacion", "mercado_nacional", "proceso", "rechazo", "revision_manual"
@@ -71,7 +75,7 @@ class E4Payload(IngestaBase):
     frutas: list[E4Fruta]
 
 
-class E6Data(BaseModel):
+class E6Data(PayloadModel):
     estado_cinta: Literal["normal", "detenida", "falla_mecanica"]
     falla_mecanica_detectada: bool
     id_grupo_en_cinta: str | None = None
