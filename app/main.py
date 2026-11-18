@@ -2,10 +2,12 @@ import hashlib
 import json
 import logging
 from contextlib import asynccontextmanager
+from datetime import timezone
 from typing import Any
 
-from fastapi import Depends, FastAPI, HTTPException, status
-from sqlalchemy import select
+from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
@@ -31,6 +33,15 @@ app = FastAPI(
     version="2.0.0",
     lifespan=lifespan,
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 def _insertar(tabla, valores: dict[str, Any], session: Session):
     dialect = session.get_bind().dialect.name
@@ -233,3 +244,189 @@ def ingest_e4(payload: E4Payload, session: Session = Depends(get_db)):
 @app.post("/api/v1/ingest/e6", status_code=status.HTTP_201_CREATED, tags=["Ingesta"])
 def ingest_e6(payload: E6Payload, session: Session = Depends(get_db)):
     return _guardar_lectura(session, payload)
+
+
+@app.get("/api/v1/lotes", tags=["Consultas"])
+def listar_lotes(session: Session = Depends(get_db)):
+    filas = session.execute(
+        select(Lote, func.count(Grupo.id_grupo))
+        .outerjoin(Grupo, Grupo.id_lote == Lote.id_lote)
+        .group_by(Lote.id_lote)
+        .order_by(Lote.creado_en.desc())
+    ).all()
+    return [
+        {
+            "id_lote": lote.id_lote,
+            "creado_en": lote.creado_en,
+            "estado": lote.estado,
+            "grupos": grupos,
+        }
+        for lote, grupos in filas
+    ]
+
+
+@app.get("/api/v1/lotes/{id_lote}/grupos", tags=["Consultas"])
+def listar_grupos(
+    id_lote: str,
+    limit: int = Query(default=20, ge=1, le=100),
+    session: Session = Depends(get_db),
+):
+    lote = session.get(Lote, id_lote)
+    if lote is None:
+        raise HTTPException(status_code=404, detail="Lote no encontrado")
+
+    grupos = session.scalars(
+        select(Grupo)
+        .where(Grupo.id_lote == id_lote)
+        .order_by(Grupo.ingreso.desc())
+        .limit(limit)
+    ).all()
+    return [
+        {
+            "id_grupo": grupo.id_grupo,
+            "id_lote": grupo.id_lote,
+            "frutas_detectadas": grupo.frutas_detectadas,
+            "estado": grupo.estado,
+            "ingreso": grupo.ingreso,
+            "salida": grupo.salida,
+        }
+        for grupo in grupos
+    ]
+
+
+@app.get("/api/v1/grupos/{id_grupo}", tags=["Consultas"])
+def obtener_trazabilidad(id_grupo: str, session: Session = Depends(get_db)):
+    grupo = session.get(Grupo, id_grupo)
+    if grupo is None:
+        raise HTTPException(status_code=404, detail="Grupo no encontrado")
+
+    frutas = session.scalars(
+        select(Fruta)
+        .where(Fruta.id_grupo == id_grupo)
+        .order_by(Fruta.id_fruta)
+    ).all()
+    lecturas = session.scalars(
+        select(Lectura)
+        .where(Lectura.id_grupo == id_grupo)
+        .order_by(Lectura.ts_estacion, Lectura.id)
+    ).all()
+    return {
+        "grupo": {
+            "id_grupo": grupo.id_grupo,
+            "id_lote": grupo.id_lote,
+            "frutas_detectadas": grupo.frutas_detectadas,
+            "validez_imagen": grupo.e1_validez_imagen,
+            "estado_captura": grupo.e1_estado_captura,
+            "posicion_correcta": grupo.e1_posicion_correcta,
+            "estado": grupo.estado,
+            "ingreso": grupo.ingreso,
+            "salida": grupo.salida,
+        },
+        "frutas": [
+            {
+                "id_fruta": fruta.id_fruta,
+                "calidad_visual": fruta.e2_calidad_visual,
+                "confianza_visual": fruta.e2_confianza_visual,
+                "defectos_detectados": fruta.e2_defectos,
+                "diametro_mm": fruta.e3_diametro_mm,
+                "tamano": fruta.e3_tamano,
+                "categoria_final": fruta.e4_categoria_final,
+                "probabilidad": fruta.e4_probabilidad,
+                "requiere_revision_manual": fruta.e4_revision_manual,
+            }
+            for fruta in frutas
+        ],
+        "lecturas": [
+            {
+                "id": lectura.id,
+                "estacion": lectura.estacion,
+                "timestamp": lectura.ts_estacion,
+                "recibida_en": lectura.ts_recepcion,
+                "payload": lectura.payload,
+            }
+            for lectura in lecturas
+        ],
+    }
+
+
+@app.get("/api/v1/metricas", tags=["Consultas"])
+def obtener_metricas(
+    lote: str | None = None, session: Session = Depends(get_db)
+):
+    if lote is not None and session.get(Lote, lote) is None:
+        raise HTTPException(status_code=404, detail="Lote no encontrado")
+
+    frutas_query = select(Fruta, Grupo.id_lote).join(
+        Grupo, Fruta.id_grupo == Grupo.id_grupo
+    )
+    lecturas_query = select(Lectura).where(Lectura.estacion == "E4")
+    alertas_query = select(Alerta.estacion, func.count(Alerta.id))
+    if lote is not None:
+        frutas_query = frutas_query.where(Grupo.id_lote == lote)
+        lecturas_query = lecturas_query.where(Lectura.id_lote == lote)
+        alertas_query = alertas_query.where(Alerta.id_lote == lote)
+
+    frutas = session.execute(frutas_query).all()
+    lecturas_e4 = session.scalars(
+        lecturas_query.order_by(Lectura.ts_estacion, Lectura.id)
+    ).all()
+    alertas_por_estacion = dict(
+        session.execute(
+            alertas_query.group_by(Alerta.estacion)
+        ).all()
+    )
+
+    primera_lectura_por_fruta = {}
+    for lectura in lecturas_e4:
+        for fruta in lectura.payload.get("frutas", []):
+            clave = (lectura.id_lote, lectura.id_grupo, fruta["id_fruta"])
+            primera_lectura_por_fruta.setdefault(clave, lectura.ts_estacion)
+
+    frutas_por_hora = {}
+    conteo_por_categoria = {
+        "exportacion": 0,
+        "mercado_nacional": 0,
+        "proceso": 0,
+        "rechazo": 0,
+        "revision_manual": 0,
+    }
+    conteo_por_tamano = {"pequeno": 0, "mediano": 0, "grande": 0}
+    frutas_clasificadas = 0
+    frutas_rechazadas = 0
+    for fruta, id_lote_fruta in frutas:
+        if fruta.e3_tamano is not None:
+            conteo_por_tamano[fruta.e3_tamano] += 1
+        if fruta.e4_categoria_final is None:
+            continue
+        frutas_clasificadas += 1
+        conteo_por_categoria[fruta.e4_categoria_final] += 1
+        if fruta.e4_categoria_final == "rechazo":
+            frutas_rechazadas += 1
+
+        clave = (id_lote_fruta, fruta.id_grupo, fruta.id_fruta)
+        timestamp = primera_lectura_por_fruta.get(clave)
+        if timestamp is not None:
+            hora = timestamp.astimezone(timezone.utc).replace(
+                minute=0, second=0, microsecond=0
+            )
+            hora_key = hora.isoformat().replace("+00:00", "Z")
+            frutas_por_hora[hora_key] = frutas_por_hora.get(hora_key, 0) + 1
+
+    return {
+        "id_lote": lote,
+        "frutas_por_hora": [
+            {"hora": hora, "cantidad": cantidad}
+            for hora, cantidad in sorted(frutas_por_hora.items())
+        ],
+        "porcentaje_rechazo": (
+            round(frutas_rechazadas * 100 / frutas_clasificadas, 2)
+            if frutas_clasificadas
+            else 0.0
+        ),
+        "conteo_por_categoria": conteo_por_categoria,
+        "conteo_por_tamano": conteo_por_tamano,
+        "anomalias_por_estacion": {
+            estacion: alertas_por_estacion.get(estacion, 0)
+            for estacion in ("E1", "E2", "E3", "E4", "E6")
+        },
+    }
