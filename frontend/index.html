@@ -185,7 +185,7 @@ button{font:inherit;color:inherit}
 .card .ft{display:flex;align-items:center;gap:.45rem;font-size:.92rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:.45rem;white-space:nowrap;overflow:hidden}
 
 /* Cinta (solo bajo E1 a E4) */
-.beltrow{grid-column:1/5;position:relative;height:6rem}
+.beltrow{grid-column:1/5;position:relative;height:6rem;overflow:hidden}
 .track{position:absolute;left:0;right:0;bottom:.4rem;height:2.4rem}
 .track .rub{position:absolute;left:1.2rem;right:1.2rem;top:.2rem;bottom:.2rem;border-radius:1rem;overflow:hidden;background:#33414b}
 /* La textura es 28 px (un periodo) más ancha y se desplaza con transform: la GPU la mueve sin repintar */
@@ -251,7 +251,7 @@ html.vertical #c-E1{grid-area:1/1}
 html.vertical #c-E2{grid-area:1/2}
 html.vertical #c-E3{grid-area:1/3}
 html.vertical #c-E4{grid-area:1/4}
-html.vertical .beltrow{grid-area:2/1/3/5;overflow:hidden}
+html.vertical .beltrow{grid-area:2/1/3/5}
 html.vertical .gnow{grid-area:3/1/4/5}
 html.vertical #c-E5{grid-area:4/1/5/3}
 html.vertical #c-E6{grid-area:4/3/5/5}
