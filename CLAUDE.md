@@ -64,7 +64,7 @@ Planificado (aún no está en `requirements.txt`): SQLAlchemy 2.0 con SQLite.
 - `tests/`: `test_contratos.py` valida los JSON v2 y el simulador; `test_ingesta.py` se salta solo mientras `schemas.py` siga en v1 (hoy: 27 pasan, 46 se saltan).
 - `tools/simulador.py`: imita a E1–E4 y E6 enviando mensajes v2 a la API.
 - Docker: `docker-compose.yml` es la configuración base (Pi, sin `--reload`, volumen para la BD) y `docker-compose.override.yml` agrega el modo desarrollo.
-- `frontend/`: `prototipo2/` y `prototipo3-simple/` con datos simulados, más sus copias para monitor vertical en `vertical/`; falta decidir cuál se usa. `api.js` es la capa de datos (modos `?api=`, `?mock=1`, `?sim=1`) con ejemplos en `mock/`, pero ninguna pantalla la usa todavía. `frontend/index.html` sigue siendo una copia de `prototipo1`.
+- `frontend/`: el dashboard oficial es `index.html` (diseño de `prototipo2`, con modo vertical), separado en `app.js` (pantalla y animación de la cinta) y `sim.js` (datos simulados y reglas), con la tipografía en `fonts/`. Usa datos simulados. `api.js` es la capa de datos (modos `?api=`, `?mock=1`, `?sim=1`) con ejemplos en `mock/`, pero la pantalla aún no la usa. `prototipo1/`, `prototipo2/`, `prototipo3-simple/` y `vertical/` quedan como referencia.
 
 ## Cómo ejecutar
 

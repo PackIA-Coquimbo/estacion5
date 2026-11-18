@@ -517,11 +517,11 @@ Recorrido por detrás de la línea, como en la maqueta [`conexion-estaciones.htm
 Mientras la API no sirva la página del dashboard, se abre el archivo directamente en el navegador de la Pi, en pantalla completa:
 
 ```bash
-chromium-browser --kiosk "file:///home/packia/estacion5-backend/frontend/prototipo3-simple/index.html?sim=1"
+chromium-browser --kiosk "file:///home/packia/estacion5-backend/frontend/index.html?sim=1"
 ```
 
 - En versiones nuevas de Raspberry Pi OS el comando puede llamarse `chromium` en vez de `chromium-browser`.
-- Cambia la ruta por la versión del dashboard que se use (por ejemplo, las de `frontend/vertical/` si el monitor queda vertical).
+- `frontend/index.html` es el dashboard oficial (`prototipo2`). Se adapta solo al monitor horizontal o vertical; si la detección falla, agrega `&orientacion=vertical` u `&orientacion=horizontal` a la dirección.
 - Para salir del modo kiosko: `Alt+F4`.
 - Cuando el dashboard lea datos reales, la dirección pasará a ser `http://localhost:8000/`.
 
