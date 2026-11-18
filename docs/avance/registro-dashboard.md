@@ -1,7 +1,7 @@
 # Registro de avance — Dashboard (Rol C)
 
-**Responsable:** Christian · **Área:** `frontend/` · **Rama:** `feat/c-prototipo-v2-contratos`
-**Última actualización:** 2026-11-13
+**Responsable:** Christian · **Área:** `frontend/` · **Rama actual:** `feat/c-dashboard-prototipo2` (antes `feat/c-prototipo-v2-contratos`)
+**Última actualización:** 2026-11-18
 
 > **Para qué sirve este documento:** dejar por escrito qué se hizo en el dashboard, por qué, para qué sirve y qué falta, de modo que Gabriel (backend) y Maicol (integración) puedan entender el estado sin preguntar, y que cualquiera retome el trabajo con contexto. Se actualiza agregando entradas nuevas al final de la sección 4.
 
@@ -12,7 +12,8 @@
 - El dashboard es la pantalla de supervisión de la **Estación 5**, que se mostrará en un **monitor conectado a una Raspberry Pi 5**.
 - Hoy funciona **solo con datos simulados** dentro del navegador. Todavía no está conectado a la API.
 - Esta etapa dejó listo: una versión **simplificada** del dashboard para comparar con la anterior, el **nombre de campo `tamano`** alineado al contrato v2, la **capa de datos (`api.js`)** con ejemplos de lo que el dashboard espera recibir del backend, y **copias de ambos diseños que se adaptan a un monitor vertical** (`frontend/vertical/`).
-- Lo que sigue depende de otras personas: Gabriel debe construir los endpoints, y el equipo debe decidir cuál de los dos diseños usar.
+- **Diseño elegido: `prototipo2`** (con la cinta animada). Desde el 18 de noviembre es `frontend/index.html`, separado en archivos (`app.js`, `sim.js`, `fonts/`) y optimizado para la Raspberry Pi (sección 4.5).
+- Lo que sigue depende de otras personas: Gabriel debe construir los endpoints para conectar la pantalla a datos reales.
 
 ## 2. Contexto del proyecto (decisiones del equipo)
 
@@ -34,7 +35,10 @@ Estas decisiones están confirmadas y el dashboard se construye sobre ellas. El 
 |---|---|---|
 | `frontend/prototipo2/index.html` | Dashboard completo, con animación de cinta, listas por fruta y panel de la Pi. Es la referencia original. | Usa datos simulados. Campo `calibre` renombrado a `tamano`. |
 | `frontend/prototipo3-simple/index.html` | Versión simplificada del mismo dashboard, para comparar y elegir. | Usa datos simulados. |
-| `frontend/index.html` | Copia de `prototipo1`. | **Desactualizado.** Se reemplazará cuando se decida qué diseño usar. |
+| `frontend/index.html` | **Dashboard oficial**: `prototipo2` con soporte de monitor vertical. Solo HTML y CSS. | Usa datos simulados. Optimizado para la Pi. |
+| `frontend/app.js` | Dibuja la pantalla y anima la cinta a partir del estado. | Listo. |
+| `frontend/sim.js` | Genera los datos simulados y aplica las reglas de anomalías (en el sistema real lo hará el backend). | Listo. Quedará como plan B (`?sim=1`). |
+| `frontend/fonts/archivo-e5.woff2` | Tipografía de la pantalla (antes iba incrustada en el HTML). | Listo. |
 | `frontend/api.js` | Capa de datos: todas las llamadas a la API pasan por aquí. | Listo, sin uso todavía. |
 | `frontend/mock/*.json` | Ejemplos de lo que devolverá la API. | Propuesta para Gabriel. |
 | `frontend/vertical/` | Copias de `prototipo2` y `prototipo3-simple` que funcionan con el monitor horizontal o vertical. Incluye un README. | Usan datos simulados. Vistas en navegador; falta probarlas en el monitor real. |
@@ -119,6 +123,32 @@ Si la API no responde en 5 segundos o devuelve error, `api.js` entrega un mensaj
 
 - **En la Raspberry Pi:** la pantalla se gira en el sistema operativo, no en el navegador (*Preferencias → Screen Configuration → Orientation*, o `wlr-randr --output HDMI-A-1 --transform 90`). Chromium en modo kiosko recibe entonces una ventana vertical. Ese comando no se ha probado todavía.
 
+### 4.5 `prototipo2` como dashboard oficial, separado y optimizado para la Raspberry Pi
+
+- **Qué:** `frontend/index.html` pasa a ser `prototipo2`, partiendo de su copia en `frontend/vertical/` para conservar el modo vertical. El código se separó en archivos y se aplicaron cuatro optimizaciones. La pantalla se ve y se comporta igual que antes.
+- **Por qué:** se eligió `prototipo2` por la cinta animada, pero la Pi estará encendida todo el turno: la animación no debe gastar CPU cuando no hay nada que mover.
+- **Para qué:** dejar la pantalla lista para conectarla a la API sin rediseñarla, y que la Pi trabaje menos y se caliente menos.
+
+**Archivos:**
+
+| Archivo | Contenido |
+|---|---|
+| `index.html` | HTML y CSS. Carga `sim.js` y luego `app.js` (scripts normales, no módulos, para que funcione abierto como archivo en el kiosko). |
+| `app.js` | Estado de la pantalla, dibujo de tarjetas, historial, alertas e indicadores, y animación de la cinta. |
+| `sim.js` | Generadores de lecturas de E1–E4 y E6, reglas de anomalías, turno precargado y métricas simuladas de la Pi. Se usa con `E5Sim.crear(S, util)`. |
+| `fonts/archivo-e5.woff2` | La tipografía. El HTML original la traía incrustada **dos veces** (idénticas); ahora va una sola vez en su archivo. |
+
+**Optimizaciones:**
+
+| # | Antes | Ahora |
+|---|---|---|
+| 1 | La animación corría a 60 cuadros por segundo siempre, aunque el grupo estuviera detenido en una estación o la cinta parada. | Corre solo mientras el grupo se traslada; el resto del tiempo un temporizador espera el fin de la fase. |
+| 2 | En cada cuadro se medían las posiciones de las estaciones y el ancho del grupo (obliga a recalcular la página). | Se miden al cargar, al cambiar el tamaño u orientación, y cuando cambia el tamaño de la cinta o de una tarjeta (`ResizeObserver`). |
+| 3 | En cada cuadro se reasignaba el color de alerta de cada fruta. | Se actualiza solo cuando llega el resultado de una estación. |
+| 4 | La textura de la cinta se movía cambiando la posición del fondo (repinta en cada cuadro). | Se mueve con `transform`, que la GPU desplaza sin repintar. |
+
+Tamaño: el HTML pasó de 293 KB a 31 KB, más la tipografía de 90 KB en su propio archivo.
+
 ## 5. Qué se verificó y qué no
 
 **Verificado:**
@@ -127,11 +157,16 @@ Si la API no responde en 5 segundos o devuelve error, `api.js` entrega un mensaj
 - `api.js`: se probaron sus tres modos con un `fetch` simulado y se comprobó que arma bien cada dirección.
 - Los JSON de ejemplo: se revisó que los números sean coherentes entre sí (tamaños según diámetro, categorías que suman el total, detalle igual al primer grupo de la lista).
 - `frontend/vertical/`: se tomaron capturas de ambas copias con Edge en modo sin ventana, a 1080 × 1920 (vertical) y 1920 × 1080 (horizontal). En vertical se corrigieron textos cortados en la tarjeta E1, filas cortadas en el historial y la altura de las tarjetas con 4 o 5 frutas. En horizontal se ven igual que los originales.
+- `frontend/index.html` (sección 4.5), con Chrome sin ventana en un Mac, abriéndolo como archivo (`file://`, como en el kiosko):
+  - Capturas a 1920 × 1080 y 1080 × 1920: se ve igual que `vertical/prototipo2` y la tipografía carga desde `fonts/`.
+  - Sin errores en la consola.
+  - Prueba automática en tiempo real comparada con el original: el grupo recorre E1 → E4 igual; con falla de cinta se detiene y no avanza de fase; al reanudar continúa. También con la falla **a mitad de un traslado**: queda quieto en ese punto y al reanudar sigue desde ahí hasta E2.
+  - CPU de Chrome durante 40 s (dos rondas, alternadas): original 15,9 % y 16,6 % de un núcleo; nuevo 12,4 % y 12,2 %. Una página vacía usa 1,6 %, así que el trabajo propio de la pantalla bajó de ~14,7 % a ~10,7 % (cerca de 27 % menos).
 
 **No verificado:**
-- Los originales (`prototipo2` y `prototipo3-simple`) no se han revisado en un navegador: falta revisar aspecto, ajuste al monitor y rendimiento. Las capturas de `frontend/vertical/` en horizontal sirven de referencia, porque en esa orientación son iguales.
+- `prototipo3-simple` original no se ha revisado en un navegador.
 - El diseño vertical solo se vio en capturas a 1080 × 1920; falta verlo en el monitor real (distancia de lectura y tamaño de letra).
-- Nada se ha probado en la Raspberry Pi.
+- Nada se ha probado en la Raspberry Pi. La medición de CPU se hizo en un Mac: sirve para comparar antes y después, no indica cuánto usará la Pi.
 - `api.js` no se ha probado contra una API real, porque los endpoints aún no existen.
 - Ninguna pantalla usa todavía `api.js`.
 
@@ -141,26 +176,31 @@ Si la API no responde en 5 segundos o devuelve error, `api.js` entrega un mensaj
 |---|---|---|
 | **Gabriel** | Revisar la forma de las respuestas (`frontend/api.js`, comentario del encabezado, y `frontend/mock/`) y construir los endpoints con esa forma. Confirmar un punto: en `estaciones.json`, la entrada de E6 incluye `estado_cinta` y `falla_mecanica_detectada`. | `docs/plan/rol-a-backend.md`, días 3 y 4 |
 | **Maicol** | Confirmar los contratos v2 con las otras estaciones y pedir a E3 los **rangos reales de diámetro** para pequeño, mediano y grande. | `docs/plan/rol-b-integracion.md`, día 1 |
-| **Todos** | Decidir entre `prototipo2` y `prototipo3-simple` (o una mezcla), y confirmar si el monitor de la demo estará vertical. | Sección 3, comparación de 4.1 y sección 4.4 |
+| **Todos** | Confirmar si el monitor de la demo estará vertical. El diseño ya está decidido (`prototipo2`). | Sección 4.4 |
 
 ## 7. Decisiones abiertas
 
-1. **Qué diseño usar.** Hasta decidirlo no se reemplaza `frontend/index.html` ni se separa el código en archivos.
+1. ~~**Qué diseño usar.**~~ Decidido el 18 de noviembre: `prototipo2`, con la cinta animada (sección 4.5).
 2. **Rangos de tamaño de E3.** Los dos prototipos usan cortes provisorios: pequeño por debajo de 92 mm, mediano de 92 a 111 mm y grande desde 112 mm. El ejemplo del equipo (40 mm, mediano) no calza con ellos; hay que usar los valores reales que informe E3.
 3. **Quién calcula las anomalías.** En los prototipos el navegador las calcula; en el plan, las calcula el backend. Al conectar la API, el dashboard solo debe mostrar lo que entregue el servidor.
-4. **Orientación del monitor.** Es probable que sea vertical. Las copias de `frontend/vertical/` sirven para ambas orientaciones; cuando se elija el diseño, el bloque vertical se lleva a `frontend/index.html`.
+4. **Orientación del monitor.** Es probable que sea vertical. `frontend/index.html` ya funciona en ambas orientaciones (detecta sola, o se fuerza con `?orientacion=`).
+5. **Qué datos llegan realmente.** Los contratos v2 aún no están confirmados por las otras estaciones. La pantalla se ajustará cuando se conozcan; mientras, todo dato simulado está en `sim.js`. La cinta hoy avanza con tiempos simulados; con datos reales deberá seguir los mensajes de E6 (`id_grupo_en_cinta`) y de cada estación.
 
 ## 8. Próximos pasos del dashboard
 
 Según `docs/plan/rol-c-dashboard.md`:
 
-1. Decidir el diseño y dejar `frontend/index.html` igual al elegido, partiendo de su copia en `frontend/vertical/` para conservar el modo vertical.
-2. Separar el código de la pantalla en archivos (`app.js` y `sim.js`), usando `api.js` para los datos.
+1. ~~Decidir el diseño y dejar `frontend/index.html` igual al elegido.~~ Hecho (4.5).
+2. ~~Separar el código de la pantalla en archivos (`app.js` y `sim.js`).~~ Hecho (4.5). Falta que la pantalla lea los datos con `api.js` (primero con `?mock=1`).
 3. Conectar tabla de grupos, indicadores y tarjetas de estación a la API (consulta cada 3 a 5 segundos), cuando Gabriel entregue los endpoints.
 4. Panel de alertas, estado de cada estación y vista de trazabilidad de un grupo.
 5. Script de kiosko y pruebas en el monitor y en la Raspberry Pi.
 
-## 9. Historial de commits de esta rama
+## 9. Historial de commits
+
+**Rama `feat/c-dashboard-prototipo2`:** `prototipo2` como dashboard oficial, separado en archivos y optimizado para la Pi (ver el PR en GitHub).
+
+**Rama `feat/c-prototipo-v2-contratos`** (mergeada en el PR #7):
 
 | Commit | Mensaje |
 |---|---|
@@ -170,5 +210,3 @@ Según `docs/plan/rol-c-dashboard.md`:
 | `34e0c09` | agrega registro de avance del dashboard |
 | `726ab14` | agrega versiones de prototipo 2 y 3 adaptables a monitor vertical |
 | `8ff6908` | actualiza registro de avance con las versiones para monitor vertical |
-
-La rama está subida a GitHub y lista para el PR a `main`.
