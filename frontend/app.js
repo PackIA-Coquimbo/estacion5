@@ -7,7 +7,6 @@
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id);
-const LOTE="LOTE-2026-11-A";
 const NAMES={E1:"Recepción",E2:"Calidad visual",E3:"Tamaño",E4:"Decisión",E5:"Registro",E6:"Cinta"};
 const LONG={E1:"recepción y captura",E2:"calidad visual",E3:"clasificación por tamaño",E4:"decisión comercial"};
 const CAT={exportacion:["Exportación","--c-exp"],mercado_nacional:["Mercado nacional","--c-nac"],proceso:["Proceso","--c-pro"],rechazo:["Rechazo","--c-rec"],revision_manual:["Revisión manual","--c-rev"]};
@@ -23,7 +22,7 @@ const ago=ms=>{const s=Math.max(0,Math.round(ms/1000));return s<60?`hace ${s} s`
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 const S={running:true,seq:0,hist:[],alerts:[],last:{},e3cut:false,lowconf:false,e6:"normal",msgs:0,shiftStart:Date.now()-58*60e3,freshId:null,conf:[],pi:{temp:51,cpu:17,ram:1.9},
-  g:null,ph:null,phT:0,x:0,lastReg:null};
+  g:null,ph:null,phT:0,lastReg:null};
 
 const sim=E5Sim.crear(S,{clamp,dec,defs,t});
 sim.seed();
