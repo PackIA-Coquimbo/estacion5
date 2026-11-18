@@ -58,7 +58,7 @@ Ajustes que se usarán en el Imager: hostname `e5-pi`, usuario `packia`, Wi-Fi `
 | **Cables de red**: hoy hay 1. Se necesitan al menos 2 más ahora (Pi y notebook o una estación) y uno por estación después. | Alta |
 | Teclado USB (para emergencias en la Pi) | Media |
 | Switch de 8 puertos | Media |
-| Corregir `conexion-estaciones.md`: usa `192.168.10.10`, la red real es `192.168.0.x` | Baja |
+| ~~Corregir `conexion-estaciones.md`: usaba `192.168.10.10`, la red real es `192.168.0.x`~~ | ✅ Corregido |
 
 ## 5. Registro de configuración (sección 13 del plan)
 
