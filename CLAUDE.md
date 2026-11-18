@@ -19,8 +19,13 @@ Leer lo que corresponda a la tarea:
 | `docs/plan/rol-a-backend.md` | Plan individual de Gabriel (backend y datos) |
 | `docs/plan/rol-b-integracion.md` | Plan individual de Maicol (integración y calidad) |
 | `docs/plan/rol-c-dashboard.md` | Plan individual de Christian (dashboard) |
+| `docs/plan/plan-conexiones.md` | Plan de la red de la línea: router, IP fijas, Pi con la API y conexión de cada estación |
+| `docs/plan/conexion-estaciones.md` | Cómo se comunican las estaciones con E5 y por qué medio (maqueta en `conexion-estaciones.html`) |
 | `docs/trelo/semana2.md` | Bitácora de la semana 2 |
-| `docs/formato_datos/*.json` | Contratos de datos por estación |
+| `docs/formato_datos/*.json` | Contratos de datos v2 por estación |
+| `docs/formato_datos/README.md` | Guía de los contratos v2, preguntas abiertas con otras estaciones y respuestas por defecto |
+| `docs/integracion/feat-b-integracion.md` | Rama de integración: tests, simulador y Docker para desarrollo y Pi |
+| `docs/avance/registro-dashboard.md` | Registro de avance del dashboard (rol C) y decisiones abiertas del frontend |
 
 Si el código y la documentación se contradicen, avisar al usuario antes de decidir cuál manda.
 
@@ -47,22 +52,38 @@ El usuario de esta sesión es normalmente **Christian (rol C)**; confirmar si no
 
 ## Stack
 
-Python 3.11, FastAPI, Uvicorn, Pydantic v2, SQLAlchemy 2.0, SQLite, Docker/Compose, pytest. Frontend en HTML, CSS y JavaScript.
+Python 3.11, FastAPI, Uvicorn, Pydantic v2, Docker/Compose, pytest. Frontend en HTML, CSS y JavaScript.
+Planificado (aún no está en `requirements.txt`): SQLAlchemy 2.0 con SQLite.
 
 ## Estado del código (verificar antes de asumir)
 
 - `app/main.py`: endpoints `POST /api/v1/ingest/e1|e2|e3|e4|e6` que validan pero **no guardan**.
-- `app/schemas.py` y `docs/formato_datos/`: todavía en formato v1 (por caja); falta migrar a v2.
+- `docs/formato_datos/`: ya en **v2** (por grupo y por fruta).
+- `app/schemas.py`: todavía en **v1** (por caja); falta migrarlo a v2, por eso la API responde 422 a los mensajes v2.
 - `app/script.sql`: esquema v1, no coincide con los schemas.
-- `frontend/prototipo2/`: último prototipo, con datos simulados. `frontend/index.html` es una copia de `prototipo1`.
+- `tests/`: `test_contratos.py` valida los JSON v2 y el simulador; `test_ingesta.py` se salta solo mientras `schemas.py` siga en v1 (hoy: 27 pasan, 46 se saltan).
+- `tools/simulador.py`: imita a E1–E4 y E6 enviando mensajes v2 a la API.
+- Docker: `docker-compose.yml` es la configuración base (Pi, sin `--reload`, volumen para la BD) y `docker-compose.override.yml` agrega el modo desarrollo.
+- `frontend/`: `prototipo2/` y `prototipo3-simple/` con datos simulados, más sus copias para monitor vertical en `vertical/`; falta decidir cuál se usa. `api.js` es la capa de datos (modos `?api=`, `?mock=1`, `?sim=1`) con ejemplos en `mock/`, pero ninguna pantalla la usa todavía. `frontend/index.html` sigue siendo una copia de `prototipo1`.
 
 ## Cómo ejecutar
 
 ```bash
-docker compose up --build        # API en http://localhost:8000 (docs en /docs)
+docker compose up --build        # desarrollo: API en http://localhost:8000 (docs en /docs)
+docker compose -f docker-compose.yml up -d --build   # Raspberry Pi: solo la configuración base
 # o, sin Docker:
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Tests y simulador (Python 3.11):
+
+```bash
+pip install -r requirements-dev.txt
+pytest -q
+python tools/simulador.py --dry-run --grupos 2      # ver los JSON sin enviarlos
+python tools/simulador.py --grupos 20 --velocidad 2 # enviar a http://localhost:8000
+python tools/simulador.py --rangos 92,112           # cortes de tamaño de los prototipos
 ```
 
 ## Al proponer o hacer cambios
