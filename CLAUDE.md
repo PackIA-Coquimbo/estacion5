@@ -64,7 +64,7 @@ Planificado (aún no está en `requirements.txt`): SQLAlchemy 2.0 con SQLite.
 - `tests/`: `test_contratos.py` valida los JSON v2 y el simulador; `test_ingesta.py` se salta solo mientras `schemas.py` siga en v1 (hoy: 27 pasan, 46 se saltan).
 - `tools/simulador.py`: imita a E1–E4 y E6 enviando mensajes v2 a la API.
 - Docker: `docker-compose.yml` es la configuración base (Pi, sin `--reload`, volumen para la BD) y `docker-compose.override.yml` agrega el modo desarrollo.
-- `frontend/`: el dashboard oficial es `index.html` (diseño de `prototipo2`, con modo vertical), separado en `app.js` (pantalla y animación de la cinta) y `sim.js` (datos simulados y reglas), con la tipografía en `fonts/`. Usa datos simulados. `api.js` es la capa de datos (modos `?api=`, `?mock=1`, `?sim=1`) con ejemplos en `mock/`, pero la pantalla aún no la usa. `prototipo1/`, `prototipo2/`, `prototipo3-simple/` y `vertical/` quedan como referencia.
+- `frontend/`: el dashboard es `index.html` (horizontal y vertical), con `app.js` (pantalla y animación de la cinta), `sim.js` (datos simulados y reglas) y la tipografía en `fonts/`. Usa datos simulados. `api.js` es la capa de datos (modos `?api=`, `?mock=1`, `?sim=1`) con ejemplos en `mock/`, pero la pantalla aún no la usa. Los prototipos anteriores se eliminaron; están en el historial de git.
 
 ## Cómo ejecutar
 
@@ -83,7 +83,7 @@ pip install -r requirements-dev.txt
 pytest -q
 python tools/simulador.py --dry-run --grupos 2      # ver los JSON sin enviarlos
 python tools/simulador.py --grupos 20 --velocidad 2 # enviar a http://localhost:8000
-python tools/simulador.py --rangos 92,112           # cortes de tamaño de los prototipos
+python tools/simulador.py --rangos 92,112           # cortes de tamaño que usa el dashboard simulado
 ```
 
 ## Al proponer o hacer cambios

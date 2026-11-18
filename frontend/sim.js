@@ -2,7 +2,7 @@
  *
  * Genera grupos de frutas, lecturas de E1 a E4 y E6, y aplica las reglas de anomalías.
  * En el sistema real esos datos llegan de las estaciones y las reglas las aplica el backend;
- * este archivo existe para el prototipo y como plan B de la demo (?sim=1).
+ * mientras la pantalla no lea la API, los datos salen de aquí. Después quedará como plan B de la demo (?sim=1).
  *
  * app.js lo usa así: const sim = E5Sim.crear(S, util), donde S es el estado de la pantalla
  * y util trae las funciones de formato que necesitan los mensajes de alerta.
@@ -63,7 +63,7 @@ function crear(S, util) {
   /* Genera la lectura de la estación k (0 = E1 … 3 = E4) para el grupo g y aplica las reglas. */
   function emit(g, k, when, live) {
     const st = "E" + (k + 1); let worst = null;
-    if (live && st === "E3" && S.e3cut) { flag(g, "alerta", st, "Sin datos de E3 para el grupo", live, when); S.last.E3miss = g.id; return }
+    if (live && st === "E3" && S.e3cut) { flag(g, "alerta", st, "Sin datos de E3 para el grupo", live, when); return }
     if (st === "E1") {
       const d = gen.E1(g); g.e1 = d; S.msgs++;
       if (!d.validez_imagen) { flag(g, "falla", st, "Imagen no válida", live, when); worst = "falla" }

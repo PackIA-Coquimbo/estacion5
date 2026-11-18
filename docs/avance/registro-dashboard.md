@@ -33,15 +33,14 @@ Estas decisiones están confirmadas y el dashboard se construye sobre ellas. El 
 
 | Archivo | Qué es | Estado |
 |---|---|---|
-| `frontend/prototipo2/index.html` | Dashboard completo, con animación de cinta, listas por fruta y panel de la Pi. Es la referencia original. | Usa datos simulados. Campo `calibre` renombrado a `tamano`. |
-| `frontend/prototipo3-simple/index.html` | Versión simplificada del mismo dashboard, para comparar y elegir. | Usa datos simulados. |
-| `frontend/index.html` | **Dashboard oficial**: `prototipo2` con soporte de monitor vertical. Solo HTML y CSS. | Usa datos simulados. Optimizado para la Pi. |
+| `frontend/index.html` | **El dashboard** (diseño elegido de `prototipo2`), horizontal y vertical. Solo HTML y CSS. | Usa datos simulados. Optimizado para la Pi. |
 | `frontend/app.js` | Dibuja la pantalla y anima la cinta a partir del estado. | Listo. |
 | `frontend/sim.js` | Genera los datos simulados y aplica las reglas de anomalías (en el sistema real lo hará el backend). | Listo. Quedará como plan B (`?sim=1`). |
 | `frontend/fonts/archivo-e5.woff2` | Tipografía de la pantalla (antes iba incrustada en el HTML). | Listo. |
 | `frontend/api.js` | Capa de datos: todas las llamadas a la API pasan por aquí. | Listo, sin uso todavía. |
 | `frontend/mock/*.json` | Ejemplos de lo que devolverá la API. | Propuesta para Gabriel. |
-| `frontend/vertical/` | Copias de `prototipo2` y `prototipo3-simple` que funcionan con el monitor horizontal o vertical. Incluye un README. | Usan datos simulados. Vistas en navegador; falta probarlas en el monitor real. |
+
+Los prototipos (`prototipo1/`, `prototipo2/`, `prototipo3-simple/` y `vertical/`) se eliminaron el 18 de noviembre (sección 4.6). Siguen en el historial de git; por ejemplo: `git show 131a760:frontend/prototipo2/index.html`.
 
 ## 4. Registro de lo realizado
 
@@ -149,10 +148,34 @@ Si la API no responde en 5 segundos o devuelve error, `api.js` entrega un mensaj
 
 Tamaño: el HTML pasó de 293 KB a 31 KB, más la tipografía de 90 KB en su propio archivo.
 
+### 4.6 Limpieza final del frontend, corrección visual de la cinta y desvanecimiento al salir
+
+- **Qué:** se dejó `frontend/` sin rastros de prototipo ni código sin uso, se corrigió un error visual en horizontal y el grupo ahora se desvanece al terminar el recorrido.
+- **Por qué:** el frontend tiene que quedar pulido para la demo y para que cualquiera lo retome sin confundirse con versiones viejas.
+
+**Limpieza:**
+
+| Qué se quitó | Detalle |
+|---|---|
+| Carpetas de prototipos | `prototipo1/`, `prototipo2/`, `prototipo3-simple/` y `vertical/` (siguen en el historial de git). |
+| 77 reglas CSS sin uso | Restos de `prototipo1` (`.belt`, `.box`, `.step`, `.ftbl`, `.grp`, `.st`, entre otras). Se comprobó en el navegador que ninguna de esas clases aparece en pantalla, en ninguna orientación ni con los botones de simulación. |
+| Reglas duplicadas | `.app` (solo dejaba valores por defecto), `.sim` y `.verdict` definidos dos veces, y dos bloques `@media (max-width:1100px)` fusionados en uno. |
+| Etiqueta `claude:viewport-fit-sides` | La dejó el visor de Claude donde se generó el primer prototipo; ningún navegador la usa. |
+| Textos y comentarios viejos | "cinta con cajas", "caja en curso", "Distribución v4" y "simulados para el prototipo". El panel de simulación ahora dice: "Modo simulación: los datos se generan en este equipo, no vienen de las estaciones." |
+| Variables sin uso en el JS | `LOTE`, `S.x` y `S.last.E3miss`. |
+
+El HTML bajó de 31 KB a 23 KB. Para comprobar que la limpieza del CSS no cambió nada, se cargaron la versión anterior y la nueva con los mismos datos y la misma hora, y se compararon **todos los estilos calculados y la posición de los 544 elementos** en horizontal y vertical: son idénticos (solo cambian `flex-direction` y `gap` del contenedor `.app`, que no tenían efecto porque es un bloque normal).
+
+**Error visual en horizontal (venía de `prototipo2`):** al registrarse, el grupo quedaba **encima de la tarjeta del grupo en curso**, y al entrar asomaba fuera del panel por la izquierda. En vertical no pasaba porque esa vista ya recortaba la fila de la cinta.
+- La fila de la cinta recorta lo que se sale en ambas orientaciones (`.beltrow{overflow:hidden}`).
+- Los puntos de entrada y salida se calculan con el ancho del grupo, para que quede completamente fuera de la cinta en vez de medio asomado.
+
+**Desvanecimiento al terminar el recorrido:** al dejar E4, el grupo se desvanece mientras avanza hasta el final de la cinta (opacidad de 1 a 0 en cerca de medio segundo) y ya es invisible cuando cruza el borde. Durante el registro la cinta queda vacía, y el grupo siguiente entra desde fuera por la izquierda. Si la cinta falla a mitad de la salida, el grupo queda quieto con la opacidad que tenía y continúa al reanudar. El cambio de opacidad lo hace la GPU, igual que el movimiento.
+
 ## 5. Qué se verificó y qué no
 
 **Verificado:**
-- La sintaxis del JavaScript de `prototipo2`, `prototipo3-simple` y `api.js`.
+- La sintaxis del JavaScript de `app.js`, `sim.js` y `api.js`.
 - `prototipo3-simple`: se ejecutó el código en Node con un documento simulado, durante 400 pasos de reloj acelerado. Recorre E1 a E4, el registro y el grupo siguiente; también la falla de cinta, el corte de E3 y la baja de confianza. Esa prueba encontró y corrigió un error que habría roto la página al iniciar.
 - `api.js`: se probaron sus tres modos con un `fetch` simulado y se comprobó que arma bien cada dirección.
 - Los JSON de ejemplo: se revisó que los números sean coherentes entre sí (tamaños según diámetro, categorías que suman el total, detalle igual al primer grupo de la lista).
@@ -162,9 +185,11 @@ Tamaño: el HTML pasó de 293 KB a 31 KB, más la tipografía de 90 KB en su pro
   - Sin errores en la consola.
   - Prueba automática en tiempo real comparada con el original: el grupo recorre E1 → E4 igual; con falla de cinta se detiene y no avanza de fase; al reanudar continúa. También con la falla **a mitad de un traslado**: queda quieto en ese punto y al reanudar sigue desde ahí hasta E2.
   - CPU de Chrome durante 40 s (dos rondas, alternadas): original 15,9 % y 16,6 % de un núcleo; nuevo 12,4 % y 12,2 %. Una página vacía usa 1,6 %, así que el trabajo propio de la pantalla bajó de ~14,7 % a ~10,7 % (cerca de 27 % menos).
+- Limpieza y salida del grupo (sección 4.6), con el mismo método:
+  - Estilos calculados y posiciones idénticos antes y después de la limpieza del CSS (544 elementos, ambas orientaciones).
+  - Seguimiento cada 100 ms de un grupo completo, de E4 hasta que el siguiente llega a E1, en 1920 × 1080 y 1080 × 1920: el grupo nunca invade la tarjeta del grupo en curso, se desvanece antes de cruzar el final de la cinta y entra desde fuera por la izquierda. Sin errores de JavaScript.
 
 **No verificado:**
-- `prototipo3-simple` original no se ha revisado en un navegador.
 - El diseño vertical solo se vio en capturas a 1080 × 1920; falta verlo en el monitor real (distancia de lectura y tamaño de letra).
 - Nada se ha probado en la Raspberry Pi. La medición de CPU se hizo en un Mac: sirve para comparar antes y después, no indica cuánto usará la Pi.
 - `api.js` no se ha probado contra una API real, porque los endpoints aún no existen.
@@ -176,13 +201,13 @@ Tamaño: el HTML pasó de 293 KB a 31 KB, más la tipografía de 90 KB en su pro
 |---|---|---|
 | **Gabriel** | Revisar la forma de las respuestas (`frontend/api.js`, comentario del encabezado, y `frontend/mock/`) y construir los endpoints con esa forma. Confirmar un punto: en `estaciones.json`, la entrada de E6 incluye `estado_cinta` y `falla_mecanica_detectada`. | `docs/plan/rol-a-backend.md`, días 3 y 4 |
 | **Maicol** | Confirmar los contratos v2 con las otras estaciones y pedir a E3 los **rangos reales de diámetro** para pequeño, mediano y grande. | `docs/plan/rol-b-integracion.md`, día 1 |
-| **Todos** | Confirmar si el monitor de la demo estará vertical. El diseño ya está decidido (`prototipo2`). | Sección 4.4 |
+| **Todos** | Confirmar si el monitor de la demo estará vertical. El diseño ya está decidido. | Sección 4.4 |
 
 ## 7. Decisiones abiertas
 
 1. ~~**Qué diseño usar.**~~ Decidido el 18 de noviembre: `prototipo2`, con la cinta animada (sección 4.5).
-2. **Rangos de tamaño de E3.** Los dos prototipos usan cortes provisorios: pequeño por debajo de 92 mm, mediano de 92 a 111 mm y grande desde 112 mm. El ejemplo del equipo (40 mm, mediano) no calza con ellos; hay que usar los valores reales que informe E3.
-3. **Quién calcula las anomalías.** En los prototipos el navegador las calcula; en el plan, las calcula el backend. Al conectar la API, el dashboard solo debe mostrar lo que entregue el servidor.
+2. **Rangos de tamaño de E3.** El dashboard simulado (`sim.js`) usa cortes provisorios: pequeño por debajo de 92 mm, mediano de 92 a 111 mm y grande desde 112 mm. El ejemplo del equipo (40 mm, mediano) no calza con ellos; hay que usar los valores reales que informe E3.
+3. **Quién calcula las anomalías.** Hoy el navegador las calcula (`sim.js`); en el plan, las calcula el backend. Al conectar la API, el dashboard solo debe mostrar lo que entregue el servidor.
 4. **Orientación del monitor.** Es probable que sea vertical. `frontend/index.html` ya funciona en ambas orientaciones (detecta sola, o se fuerza con `?orientacion=`).
 5. **Qué datos llegan realmente.** Los contratos v2 aún no están confirmados por las otras estaciones. La pantalla se ajustará cuando se conozcan; mientras, todo dato simulado está en `sim.js`. La cinta hoy avanza con tiempos simulados; con datos reales deberá seguir los mensajes de E6 (`id_grupo_en_cinta`) y de cada estación.
 
@@ -198,7 +223,7 @@ Según `docs/plan/rol-c-dashboard.md`:
 
 ## 9. Historial de commits
 
-**Rama `feat/c-dashboard-prototipo2`:** `prototipo2` como dashboard oficial, separado en archivos y optimizado para la Pi (ver el PR en GitHub).
+**Rama `feat/c-dashboard-prototipo2`** (PR #11): `prototipo2` como dashboard, separado en archivos y optimizado para la Pi; después, limpieza final del frontend, corrección visual de la cinta en horizontal y desvanecimiento al salir.
 
 **Rama `feat/c-prototipo-v2-contratos`** (mergeada en el PR #7):
 

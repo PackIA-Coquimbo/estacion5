@@ -521,7 +521,7 @@ chromium-browser --kiosk "file:///home/packia/estacion5-backend/frontend/index.h
 ```
 
 - En versiones nuevas de Raspberry Pi OS el comando puede llamarse `chromium` en vez de `chromium-browser`.
-- `frontend/index.html` es el dashboard oficial (`prototipo2`). Se adapta solo al monitor horizontal o vertical; si la detección falla, agrega `&orientacion=vertical` u `&orientacion=horizontal` a la dirección.
+- `frontend/index.html` es el dashboard. Se adapta solo al monitor horizontal o vertical; si la detección falla, agrega `&orientacion=vertical` u `&orientacion=horizontal` a la dirección.
 - Para salir del modo kiosko: `Alt+F4`.
 - Cuando el dashboard lea datos reales, la dirección pasará a ser `http://localhost:8000/`.
 

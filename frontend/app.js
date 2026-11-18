@@ -7,7 +7,6 @@
 (()=>{
 "use strict";
 const $=id=>document.getElementById(id);
-const LOTE="LOTE-2026-11-A";
 const NAMES={E1:"Recepción",E2:"Calidad visual",E3:"Tamaño",E4:"Decisión",E5:"Registro",E6:"Cinta"};
 const LONG={E1:"recepción y captura",E2:"calidad visual",E3:"clasificación por tamaño",E4:"decisión comercial"};
 const CAT={exportacion:["Exportación","--c-exp"],mercado_nacional:["Mercado nacional","--c-nac"],proceso:["Proceso","--c-pro"],rechazo:["Rechazo","--c-rec"],revision_manual:["Revisión manual","--c-rev"]};
@@ -23,7 +22,7 @@ const ago=ms=>{const s=Math.max(0,Math.round(ms/1000));return s<60?`hace ${s} s`
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
 const S={running:true,seq:0,hist:[],alerts:[],last:{},e3cut:false,lowconf:false,e6:"normal",msgs:0,shiftStart:Date.now()-58*60e3,freshId:null,conf:[],pi:{temp:51,cpu:17,ram:1.9},
-  g:null,ph:null,phT:0,x:0,lastReg:null};
+  g:null,ph:null,phT:0,lastReg:null};
 
 const sim=E5Sim.crear(S,{clamp,dec,defs,t});
 sim.seed();
@@ -35,23 +34,34 @@ sim.seed();
    - Las posiciones de las estaciones se miden una vez (al cargar, al cambiar el tamaño o la orientación),
      no en cada cuadro.
    - El color de las frutas se actualiza solo cuando llega un resultado, no en cada cuadro.
-   - La textura de la cinta se desplaza con transform, que la GPU mueve sin repintar. */
+   - La textura de la cinta se desplaza con transform, que la GPU mueve sin repintar.
+   El grupo entra desde fuera de la cinta por la izquierda y, tras E4, se desvanece al llegar al final:
+   la fila de la cinta recorta lo que queda fuera, así el grupo nunca invade otros paneles. */
 const beltrow=$("beltrow"),tex=$("tex");
-let fgEl=null,fgW=0,beltShift=0,pos=null;
+let fgEl=null,fgW=0,beltShift=0,pos=null,opacidad=1;
 let raf=0,timer=0,t0=0,base=0;   // t0 y base: momento y avance (s) con que empezó a correr la fase actual
 
 function medir(){
   const br=beltrow.getBoundingClientRect();
-  pos={start:-40,exit:br.width+60};
+  pos={ancho:br.width};
   for(let k=0;k<4;k++){const c=$("c-E"+(k+1)).getBoundingClientRect();pos[k]=c.left+c.width/2-br.left}
   fgW=fgEl?fgEl.offsetWidth:0}
+/* Centro del grupo en cada punto del recorrido. Entrada y salida quedan justo fuera de la cinta. */
+const lugar=to=>to==="start"?-fgW/2-8:to==="exit"?pos.ancho+fgW/2+8:pos[to];
 const ease=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2;
 function dibujar(){
   const g=S.g,p=S.ph;if(!g||!p||!fgEl||!pos)return;
-  let x;
-  if(p.t==="move"){const a=pos[g.from],b=pos[p.to];x=a+(b-a)*ease(clamp(S.phT/p.d,0,1))}
-  else if(p.t==="gap")x=pos.start;else if(p.t==="reg")x=pos.exit;else x=pos[g.from];
-  fgEl.style.transform=`translateX(${(x-fgW/2).toFixed(1)}px)`}
+  let x,op=1;
+  if(p.t==="move"){
+    const a=lugar(g.from),b=lugar(p.to),avance=clamp(S.phT/p.d,0,1);x=a+(b-a)*ease(avance);
+    if(p.to==="exit"){
+      // Se desvanece desde que deja E4 hasta que su borde derecho toca el final de la cinta
+      const borde=pos.ancho-fgW/2;op=borde>a?1-clamp((x-a)/(borde-a),0,1):1-avance}}
+  else if(p.t==="gap")x=lugar("start");
+  else if(p.t==="reg"){x=lugar("exit");op=0}
+  else x=lugar(g.from);
+  fgEl.style.transform=`translateX(${(x-fgW/2).toFixed(1)}px)`;
+  if(op!==opacidad){opacidad=op;fgEl.style.opacity=op.toFixed(3)}}
 function colorFrutas(){
   if(!fgEl)return;const g=S.g;
   fgEl.querySelectorAll(".fs i").forEach((s,i)=>{const a=g.fr[i].an;s.className=a.some(z=>z[0]==="falla")?"bad":a.length?"warn":""})}
@@ -84,7 +94,7 @@ function startGroup(){
   const g=sim.newGroup(Date.now());S.g=g;g.P=sim.plan(g);g.pi=0;S.phT=0;g.from="start";
   if(fgEl)fgEl.remove();
   fgEl=document.createElement("div");fgEl.className="fg";fgEl.innerHTML=`<span class="id">${g.id}</span><span class="fs">${g.fr.map(()=>"<i></i>").join("")}</span>`;
-  beltrow.appendChild(fgEl);fgW=fgEl.offsetWidth;colorFrutas();enterPhase();render.all()}
+  beltrow.appendChild(fgEl);fgW=fgEl.offsetWidth;opacidad=1;colorFrutas();enterPhase();render.all()}
 function enterPhase(){
   const g=S.g,p=g.P[g.pi];S.ph=p;S.phT=0;
   if(p.t==="move"){S.moving=true;sim.e6send("normal",false)}else S.moving=false;
