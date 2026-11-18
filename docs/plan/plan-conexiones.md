@@ -164,9 +164,9 @@ En **Advanced → Wireless → Wireless Settings**:
 
 ### ✅ Listo cuando
 
-- [ ] Un notebook conectado a `PackIA-Linea` abre `http://tplinkwifi.net` con la clave de administrador nueva.
-- [ ] El respaldo de configuración está guardado.
-- [ ] La red real del router quedó anotada en la sección 2.
+- [x] Un notebook conectado a `PackIA-Linea` abre `http://tplinkwifi.net` con la clave de administrador nueva.
+- [x] El respaldo de configuración está guardado.
+- [x] La red real del router quedó anotada en la sección 2.
 
 ---
 
