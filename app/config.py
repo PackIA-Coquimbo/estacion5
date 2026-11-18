@@ -1,0 +1,17 @@
+import os
+
+
+CONFIANZA_MINIMA = 0.70
+VENTANA_CONFIANZA = 12
+MINIMO_BAJAS_TENDENCIA = 3
+DIFERENCIA_DIAMETRO_MAX_MM = float(
+    os.getenv("E5_DIFERENCIA_DIAMETRO_MAX_MM", "15")
+)
+SEGUNDOS_SIN_SENAL = int(os.getenv("E5_SEGUNDOS_SIN_SENAL", "30"))
+INTERVALO_REVISION_SENAL = 5
+ESTACIONES = ("E1", "E2", "E3", "E4", "E6")
+
+if DIFERENCIA_DIAMETRO_MAX_MM <= 0:
+    raise ValueError("E5_DIFERENCIA_DIAMETRO_MAX_MM debe ser mayor que cero")
+if SEGUNDOS_SIN_SENAL <= 0:
+    raise ValueError("E5_SEGUNDOS_SIN_SENAL debe ser mayor que cero")

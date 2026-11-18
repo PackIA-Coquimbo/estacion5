@@ -1,10 +1,10 @@
+import asyncio
 import hashlib
 import json
 import logging
 from contextlib import asynccontextmanager
-from datetime import timezone
+from datetime import datetime, timezone
 from typing import Any
-
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
@@ -13,8 +13,15 @@ from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from app.db import crear_tablas, get_db
+from app.config import (
+    ESTACIONES,
+    INTERVALO_REVISION_SENAL,
+    SEGUNDOS_SIN_SENAL,
+    VENTANA_CONFIANZA,
+)
+from app.db import SessionLocal, crear_tablas, get_db
 from app.models import Alerta, EventoCinta, Fruta, Grupo, Lectura, Lote
+from app.reglas import AlertaEvaluada, evaluar, evaluar_sin_senal
 from app.schemas import E1Payload, E2Payload, E3Payload, E4Payload, E6Payload
 
 
@@ -24,7 +31,15 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     crear_tablas()
-    yield
+    monitor = asyncio.create_task(_monitor_senales())
+    try:
+        yield
+    finally:
+        monitor.cancel()
+        try:
+            await monitor
+        except asyncio.CancelledError:
+            pass
 
 
 app = FastAPI(
@@ -133,6 +148,145 @@ def _actualizar_frutas(session: Session, id_grupo: str, payload: Any) -> None:
         )
 
 
+def _conteos_por_estacion(session: Session, id_grupo: str) -> dict[str, int]:
+    campos = {
+        "E2": Fruta.e2_confianza_visual,
+        "E3": Fruta.e3_diametro_mm,
+        "E4": Fruta.e4_categoria_final,
+    }
+    conteos = {}
+    for estacion, campo in campos.items():
+        lectura_existe = session.scalar(
+            select(Lectura.id)
+            .where(Lectura.id_grupo == id_grupo, Lectura.estacion == estacion)
+            .limit(1)
+        )
+        if lectura_existe is not None:
+            conteos[estacion] = session.scalar(
+                select(func.count(Fruta.id)).where(
+                    Fruta.id_grupo == id_grupo, campo.is_not(None)
+                )
+            )
+    return conteos
+
+
+def _confianzas_recientes(
+    session: Session, payload_hash: str
+) -> list[float]:
+    lecturas = session.scalars(
+        select(Lectura)
+        .where(
+            Lectura.estacion == "E2",
+            Lectura.payload_hash != payload_hash,
+        )
+        .order_by(Lectura.ts_estacion.desc(), Lectura.id.desc())
+        .limit(VENTANA_CONFIANZA)
+    ).all()
+    confianzas = []
+    for lectura in lecturas:
+        for fruta in lectura.payload.get("frutas", []):
+            confianzas.append(fruta["confianza_visual"])
+            if len(confianzas) == VENTANA_CONFIANZA:
+                return confianzas
+    return confianzas
+
+
+def _registrar_alertas(
+    session: Session,
+    id_lote: str,
+    id_grupo: str | None,
+    alertas: list[AlertaEvaluada],
+) -> None:
+    for alerta in alertas:
+        dedupe_source = (
+            f"{alerta.codigo}|{id_lote}|{id_grupo or ''}|{alerta.id_fruta or ''}"
+        )
+        dedupe_key = hashlib.sha256(dedupe_source.encode("utf-8")).hexdigest()
+        activa = session.scalar(
+            select(Alerta.id).where(
+                Alerta.dedupe_key == dedupe_key,
+                Alerta.resuelta.is_(False),
+            )
+        )
+        if activa is None:
+            session.add(
+                Alerta(
+                    id_lote=id_lote,
+                    id_grupo=id_grupo,
+                    id_fruta=alerta.id_fruta,
+                    estacion=alerta.estacion,
+                    severidad=alerta.severidad,
+                    mensaje=alerta.mensaje,
+                    dedupe_key=dedupe_key,
+                )
+            )
+
+
+def _registrar_alertas_sin_senal(session: Session) -> None:
+    evento_cinta = session.scalar(
+        select(EventoCinta)
+        .order_by(EventoCinta.ts.desc(), EventoCinta.id.desc())
+        .limit(1)
+    )
+    if evento_cinta is None:
+        return
+
+    lectura_cinta = session.get(Lectura, evento_cinta.lectura_id)
+    if lectura_cinta is None:
+        raise RuntimeError("El evento de cinta no tiene una lectura asociada")
+
+    ultimas_lecturas = {}
+    for estacion in ESTACIONES:
+        lectura = session.scalar(
+            select(Lectura)
+            .where(Lectura.estacion == estacion)
+            .order_by(Lectura.ts_recepcion.desc(), Lectura.id.desc())
+            .limit(1)
+        )
+        if lectura is not None:
+            ultimas_lecturas[estacion] = lectura
+
+    alertas = evaluar_sin_senal(
+        {
+            estacion: lectura.ts_recepcion
+            for estacion, lectura in ultimas_lecturas.items()
+        },
+        cinta_en_marcha=(
+            evento_cinta.estado_cinta == "normal" and not evento_cinta.falla_mecanica
+        ),
+        inicio_marcha=lectura_cinta.ts_recepcion,
+        ahora=datetime.now(timezone.utc),
+        segundos_sin_senal=SEGUNDOS_SIN_SENAL,
+    )
+    for alerta in alertas:
+        lectura = ultimas_lecturas.get(alerta.estacion)
+        id_lote = lectura.id_lote if lectura is not None else evento_cinta.id_lote
+        _registrar_alertas(session, id_lote, None, [alerta])
+
+
+def _evaluar_y_registrar_alertas(
+    session: Session, payload: Any, payload_hash: str
+) -> None:
+    id_grupo = getattr(payload, "id_grupo", None)
+    grupo = session.get(Grupo, id_grupo) if id_grupo is not None else None
+    alertas = evaluar(
+        payload,
+        confianza_reciente=(
+            _confianzas_recientes(session, payload_hash)
+            if isinstance(payload, E2Payload)
+            else ()
+        ),
+        frutas_esperadas=grupo.frutas_detectadas if grupo is not None else None,
+        conteos_por_estacion=(
+            _conteos_por_estacion(session, id_grupo)
+            if id_grupo is not None
+            else None
+        ),
+    )
+    _registrar_alertas(session, payload.id_lote, id_grupo, alertas)
+    _registrar_alertas_sin_senal(session)
+
+
 def _guardar_lectura(session: Session, payload: Any) -> dict:
     datos = payload.model_dump(mode="json")
     json_canonico = json.dumps(
@@ -200,6 +354,8 @@ def _guardar_lectura(session: Session, payload: Any) -> dict:
         )
 
     try:
+        session.flush()
+        _evaluar_y_registrar_alertas(session, payload, payload_hash)
         session.commit()
     except SQLAlchemyError:
         session.rollback()
@@ -430,3 +586,100 @@ def obtener_metricas(
             for estacion in ("E1", "E2", "E3", "E4", "E6")
         },
     }
+
+
+def _revisar_senales() -> None:
+    with SessionLocal() as session:
+        try:
+            _registrar_alertas_sin_senal(session)
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            raise
+
+
+async def _monitor_senales() -> None:
+    while True:
+        try:
+            await asyncio.to_thread(_revisar_senales)
+        except SQLAlchemyError:
+            logger.exception("No se pudo revisar el estado de señal de las estaciones")
+        await asyncio.sleep(INTERVALO_REVISION_SENAL)
+
+
+def _alerta_a_dict(alerta: Alerta) -> dict:
+    return {
+        "id": alerta.id,
+        "id_lote": alerta.id_lote,
+        "id_grupo": alerta.id_grupo,
+        "id_fruta": alerta.id_fruta,
+        "estacion": alerta.estacion,
+        "severidad": alerta.severidad,
+        "mensaje": alerta.mensaje,
+        "creado_en": alerta.creado_en,
+        "resuelta": alerta.resuelta,
+    }
+
+
+@app.get("/api/v1/alertas", tags=["Alertas"])
+def listar_alertas(
+    activas: bool = True, session: Session = Depends(get_db)
+):
+    consulta = select(Alerta)
+    if activas:
+        consulta = consulta.where(Alerta.resuelta.is_(False))
+    alertas = session.scalars(
+        consulta.order_by(Alerta.creado_en.desc(), Alerta.id.desc())
+    ).all()
+    return [_alerta_a_dict(alerta) for alerta in alertas]
+
+
+@app.patch("/api/v1/alertas/{id_alerta}", tags=["Alertas"])
+def resolver_alerta(id_alerta: int, session: Session = Depends(get_db)):
+    alerta = session.get(Alerta, id_alerta)
+    if alerta is None:
+        raise HTTPException(status_code=404, detail="Alerta no encontrada")
+
+    if not alerta.resuelta:
+        alerta.resuelta = True
+        alerta.dedupe_key = f"{alerta.dedupe_key}:resuelta:{alerta.id}"
+        try:
+            session.commit()
+        except SQLAlchemyError:
+            session.rollback()
+            logger.exception("No se pudo resolver la alerta %s", id_alerta)
+            raise
+    return _alerta_a_dict(alerta)
+
+
+@app.get("/api/v1/estaciones/estado", tags=["Estado"])
+def obtener_estado_estaciones(session: Session = Depends(get_db)):
+    ahora = datetime.now(timezone.utc)
+    estado: list[dict] = []
+    for estacion in ESTACIONES:
+        lectura = session.scalar(
+            select(Lectura)
+            .where(Lectura.estacion == estacion)
+            .order_by(Lectura.ts_recepcion.desc(), Lectura.id.desc())
+            .limit(1)
+        )
+        segundos = (
+            round((ahora - lectura.ts_recepcion).total_seconds(), 1)
+            if lectura is not None
+            else None
+        )
+        estado.append(
+            {
+                "estacion": estacion,
+                "estado": (
+                    "online"
+                    if segundos is not None and segundos <= SEGUNDOS_SIN_SENAL
+                    else "sin_senal"
+                ),
+                "ultima_lectura": (
+                    lectura.ts_recepcion if lectura is not None else None
+                ),
+                "segundos_desde_lectura": segundos,
+            }
+        )
+    return estado
