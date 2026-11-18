@@ -4,9 +4,12 @@ import json
 import logging
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any
+
 from fastapi import Depends, FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
@@ -179,7 +182,7 @@ def _confianzas_recientes(
             Lectura.estacion == "E2",
             Lectura.payload_hash != payload_hash,
         )
-        .order_by(Lectura.ts_estacion.desc(), Lectura.id.desc())
+        .order_by(Lectura.ts_recepcion.desc(), Lectura.id.desc())
         .limit(VENTANA_CONFIANZA)
     ).all()
     confianzas = []
@@ -225,7 +228,8 @@ def _registrar_alertas(
 def _registrar_alertas_sin_senal(session: Session) -> None:
     evento_cinta = session.scalar(
         select(EventoCinta)
-        .order_by(EventoCinta.ts.desc(), EventoCinta.id.desc())
+        .join(Lectura, EventoCinta.lectura_id == Lectura.id)
+        .order_by(Lectura.ts_recepcion.desc(), EventoCinta.id.desc())
         .limit(1)
     )
     if evento_cinta is None:
@@ -370,11 +374,6 @@ def _guardar_lectura(session: Session, payload: Any) -> dict:
         "lectura_id": lectura.id,
         "duplicado": False,
     }
-
-
-@app.get("/")
-def read_root():
-    return {"status": "online", "mensaje": "Servidor de Ingesta Estación 5 Operativo"}
 
 
 @app.post("/api/v1/ingest/e1", status_code=status.HTTP_201_CREATED, tags=["Ingesta"])
@@ -683,3 +682,40 @@ def obtener_estado_estaciones(session: Session = Depends(get_db)):
             }
         )
     return estado
+
+
+@app.get("/api/v1/sistema", tags=["Sistema"])
+def obtener_estado_sistema():
+    import psutil
+
+    try:
+        sensores = psutil.sensors_temperatures()
+    except NotImplementedError:
+        sensores = {}
+    temperatura = next(
+        (
+            entrada.current
+            for nombre in ("cpu_thermal", "coretemp")
+            for entrada in sensores.get(nombre, [])
+            if entrada.current is not None
+        ),
+        None,
+    )
+    memoria = psutil.virtual_memory()
+    return {
+        "temperatura_c": temperatura,
+        "cpu_porcentaje": psutil.cpu_percent(interval=0.1),
+        "ram_porcentaje": memoria.percent,
+        "ram_usada_bytes": memoria.used,
+        "ram_total_bytes": memoria.total,
+    }
+
+
+app.mount(
+    "/",
+    StaticFiles(
+        directory=Path(__file__).resolve().parent.parent / "frontend",
+        html=True,
+    ),
+    name="frontend",
+)

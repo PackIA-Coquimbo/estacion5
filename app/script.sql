@@ -3,7 +3,7 @@
 
 CREATE TABLE IF NOT EXISTS lote (
     id_lote VARCHAR(50) PRIMARY KEY,
-    fecha_creacion DATETIME NOT NULL,
+    fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     estado VARCHAR(20) NOT NULL DEFAULT 'activo'
         CHECK (estado IN ('activo', 'finalizado', 'pausado'))
 );
@@ -16,7 +16,7 @@ CREATE TABLE IF NOT EXISTS grupo (
     e1_estado_captura VARCHAR(30),
     e1_posicion_correcta BOOLEAN,
     estado VARCHAR(30) NOT NULL DEFAULT 'en_proceso',
-    ingreso DATETIME NOT NULL,
+    ingreso DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     salida DATETIME
 );
 
@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS lectura (
     id_grupo VARCHAR(100) REFERENCES grupo(id_grupo) ON DELETE SET NULL,
     estacion VARCHAR(2) NOT NULL,
     ts_estacion DATETIME NOT NULL,
-    ts_recepcion DATETIME NOT NULL,
+    ts_recepcion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     payload JSON NOT NULL,
     payload_hash VARCHAR(64) NOT NULL UNIQUE
 );
@@ -54,7 +54,7 @@ CREATE TABLE IF NOT EXISTS alerta (
     estacion VARCHAR(2) NOT NULL,
     severidad VARCHAR(20) NOT NULL,
     mensaje VARCHAR(300) NOT NULL,
-    creado_en DATETIME NOT NULL,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     resuelta BOOLEAN NOT NULL DEFAULT FALSE,
     dedupe_key VARCHAR(200) NOT NULL UNIQUE
 );

@@ -11,6 +11,7 @@ from sqlalchemy import (
     JSON,
     String,
     UniqueConstraint,
+    func,
 )
 from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column
@@ -31,11 +32,13 @@ class UTCDateTime(TypeDecorator):
             return None
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
-        return value.astimezone(timezone.utc).replace(tzinfo=None)
+        return value.astimezone(timezone.utc)
 
     def process_result_value(self, value, _dialect):
-        if value is not None and value.tzinfo is None:
-            return value.replace(tzinfo=timezone.utc)
+        if value is not None:
+            if value.tzinfo is None:
+                value = value.replace(tzinfo=timezone.utc)
+            return value.astimezone(timezone.utc)
         return value
 
 
@@ -50,7 +53,10 @@ class Lote(Base):
 
     id_lote: Mapped[str] = mapped_column(String(50), primary_key=True)
     creado_en: Mapped[datetime] = mapped_column(
-        "fecha_creacion", UTCDateTime(), default=ahora_utc
+        "fecha_creacion",
+        UTCDateTime(),
+        default=ahora_utc,
+        server_default=func.current_timestamp(),
     )
     estado: Mapped[str] = mapped_column(String(20), default="activo", nullable=False)
 
@@ -70,7 +76,9 @@ class Grupo(Base):
     e1_estado_captura: Mapped[str | None] = mapped_column(String(30))
     e1_posicion_correcta: Mapped[bool | None] = mapped_column(Boolean)
     estado: Mapped[str] = mapped_column(String(30), default="en_proceso", nullable=False)
-    ingreso: Mapped[datetime] = mapped_column(UTCDateTime(), default=ahora_utc)
+    ingreso: Mapped[datetime] = mapped_column(
+        UTCDateTime(), default=ahora_utc, server_default=func.current_timestamp()
+    )
     salida: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
 
@@ -113,7 +121,10 @@ class Lectura(Base):
     estacion: Mapped[str] = mapped_column(String(2), nullable=False)
     ts_estacion: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     ts_recepcion: Mapped[datetime] = mapped_column(
-        UTCDateTime(), default=ahora_utc, nullable=False
+        UTCDateTime(),
+        default=ahora_utc,
+        server_default=func.current_timestamp(),
+        nullable=False,
     )
     payload: Mapped[dict] = mapped_column(JSON, nullable=False)
     payload_hash: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -135,7 +146,9 @@ class Alerta(Base):
     estacion: Mapped[str] = mapped_column(String(2), nullable=False)
     severidad: Mapped[str] = mapped_column(String(20), nullable=False)
     mensaje: Mapped[str] = mapped_column(String(300), nullable=False)
-    creado_en: Mapped[datetime] = mapped_column(UTCDateTime(), default=ahora_utc)
+    creado_en: Mapped[datetime] = mapped_column(
+        UTCDateTime(), default=ahora_utc, server_default=func.current_timestamp()
+    )
     resuelta: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     dedupe_key: Mapped[str] = mapped_column(String(200), nullable=False)
 
