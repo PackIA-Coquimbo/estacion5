@@ -21,7 +21,7 @@
 | **Router** | El TP-Link Archer AX1800. Crea la red de la línea y entrega las direcciones IP. |
 | **Switch** | Caja con muchos puertos de red. Se conecta al router para tener más puertos. No se configura. |
 | **Puerto LAN** | Puerto del router para los equipos de la línea (Pi, estaciones, switch). |
-| **Puerto WAN / Internet** | Puerto del router que recibe internet desde otra red (por ejemplo, la del colegio). |
+| **Puerto WAN / Internet** | Puerto del router que recibe internet desde otra red (por ejemplo, la de la universidad). |
 | **IP** | Dirección de un equipo en la red, por ejemplo `192.168.0.10`. |
 | **MAC** | Identificador fijo de la tarjeta de red de un equipo, por ejemplo `D8:3A:DD:12:34:56`. Sirve para reservarle una IP. |
 | **Reserva de IP** | Regla en el router: "a esta MAC dale siempre esta IP". |
@@ -36,15 +36,16 @@
 |---|---|
 | Raspberry Pi 5 | ✅ Disponible |
 | Fuente oficial USB-C de 27 W para la Pi | ⏳ Por confirmar |
-| Tarjeta microSD de 32 GB | ✅ Disponible |
+| Tarjeta microSD de 32 GB | ✅ Disponible · ⚠️ no hay lector para grabarla; se usará un pendrive (ver Fase 2) |
+| Pendrive para el sistema de la Pi | ✅ Disponible |
 | Router TP-Link Archer AX1800 (Wi-Fi 6, doble banda) con su fuente | ✅ Disponible |
 | Monitor | ✅ Disponible |
 | Cable micro-HDMI a HDMI | ✅ Disponible |
-| Teclado y mouse (solo para la instalación) | ⏳ Por confirmar |
+| Teclado y mouse (solo para la instalación) | ❌ Falta el teclado USB |
 | Notebook con Windows o Linux para configurar y probar | ✅ Los del equipo |
 | Tubos PVC con abrazaderas y tees | ✅ Disponibles · falta medir si alcanzan (Fase 6) |
 | Codos y uniones PVC | ⏳ Por confirmar según el recorrido |
-| Cables de red (uno por equipo cableado, más 2 de repuesto) | ⏳ Por confirmar cuántos hay |
+| Cables de red (uno por equipo cableado, más 2 de repuesto) | ❌ Hay 1 (ocupado en el WAN); faltan al menos 2 ahora y uno por estación después |
 | Switch de 8 puertos | ⏳ Por conseguir |
 
 **Límite actual:** el router trae 4 puertos LAN. Uno es para la Pi, así que **solo 3 estaciones pueden ir por cable** hasta que llegue el switch. Las otras van por Wi-Fi mientras tanto.
@@ -58,7 +59,7 @@ Todas las IP de equipos de la línea se **reservan en el router** (paso 2.5), as
 | Equipo | IP | Conexión ahora | Conexión con switch |
 |---|---|---|---|
 | Router | `192.168.0.1` | — | — |
-| Raspberry Pi 5 (E5) | `192.168.0.10` | Cable, LAN 1 | Cable |
+| Raspberry Pi 5 (E5) | `192.168.0.10` | Cable, LAN 1 (provisorio: Wi-Fi `PackIA-Linea-5G`) | Cable |
 | E1 | `192.168.0.11` | Por definir | Cable |
 | E2 | `192.168.0.12` | Por definir | Cable |
 | E3 | `192.168.0.13` | Por definir | Cable |
@@ -94,7 +95,7 @@ Revisa la parte trasera y frontal antes de conectar nada.
 
 1. Pon el router en un lugar cercano a la Pi y al centro de la línea, a la vista y con ventilación.
 2. Conecta la fuente y presiona **Power**. Espera **2 minutos** hasta que las luces se estabilicen.
-3. **Internet (opcional, recomendado al principio):** conecta un cable desde la red del colegio (o de casa) al puerto **Internet/WAN**. Sirve para instalar programas en la Pi en la Fase 2. Si no hay red disponible, sigue sin él y revisa el riesgo correspondiente en la sección 12.
+3. **Internet (opcional, recomendado al principio):** conecta un cable desde la red de la universidad (o de casa) al puerto **Internet/WAN**. Sirve para instalar programas en la Pi en la Fase 2. Si no hay red disponible, sigue sin él y revisa el riesgo correspondiente en la sección 12.
 4. Conecta un notebook al router:
    - **Por Wi-Fi:** usa el nombre y la clave de la etiqueta de abajo, **o**
    - **Por cable:** del notebook a cualquier puerto **LAN**.
@@ -129,7 +130,7 @@ Después del primer ingreso se abre el asistente. Si no aparece, búscalo como *
 
 En **Advanced → Wireless → Wireless Settings**:
 
-- [ ] Las dos bandas están activas, con los nombres de la tabla anterior.
+- [x] Las dos bandas están activas, con los nombres de la tabla anterior.
 - [ ] **Hide SSID** (ocultar red) está **desactivado**.
 - [ ] Si el lugar tiene muchas redes, deja el canal en **Auto** por ahora. Si en las pruebas hay cortes, se cambia (ver sección 11).
 
@@ -137,8 +138,8 @@ En **Advanced → Wireless → Wireless Settings**:
 
 1. En **Advanced → Network → LAN**, anota la **IP del router** (normalmente `192.168.0.1`) y la máscara (`255.255.255.0`). **No la cambies.**
 2. En **Advanced → Network → DHCP Server**:
-   - [ ] **DHCP Server** está **activado**.
-   - [ ] Anota el rango de direcciones automáticas (**IP Address Pool**), por ejemplo `192.168.0.100 – 192.168.0.249`.
+   - [x] **DHCP Server** está **activado**.
+   - [x] Anota el rango de direcciones automáticas (**IP Address Pool**), por ejemplo `192.168.0.100 – 192.168.0.249`.
    - Las IP fijas del plan (`.10` a `.16`) quedan **fuera** de ese rango a propósito, para que nunca se las entregue a otro equipo.
 3. Si el router usa otra red, corrige la tabla de la sección 2 antes de seguir.
 
@@ -171,6 +172,8 @@ En **Advanced → Wireless → Wireless Settings**:
 ---
 
 ## 4. Fase 2 — Pi en la red con la API · Responsables: todos
+
+> ⚠️ **Cambio acordado el 18 de noviembre:** como no hay lector de microSD y hay un solo cable de red, el sistema se graba en un **pendrive** y la Pi se conecta **por Wi-Fi** a `PackIA-Linea-5G` mientras no haya otro cable. En el Imager: almacenamiento = pendrive y Wi-Fi configurado (país CL). Al pasar a cable, la reserva de `.10` se hace con la MAC **de la tarjeta cableada**. Detalle en [`../avance/registro-conexiones.md`](../avance/registro-conexiones.md), sección 3.
 
 ### 2.1 Preparar la tarjeta microSD (en un notebook)
 
@@ -261,7 +264,7 @@ Ambos comandos deben mostrar un número de versión.
 
 ```bash
 cd ~
-git clone https://github.com/PackIA-Coquimbo/estacion5-backend.git
+git clone https://github.com/PackIA-Coquimbo/estacion5.git estacion5-backend
 cd estacion5-backend
 docker compose -f docker-compose.yml up -d --build
 ```
@@ -569,7 +572,7 @@ No hace falta esperar al switch: las fases 1 a 4 se pueden hacer solo con el rou
 | `ssh` avisa *REMOTE HOST IDENTIFICATION HAS CHANGED* | Se reinstaló la Pi con la misma IP | En el notebook: `ssh-keygen -R 192.168.0.10` y volver a entrar |
 | `apt update` o `get.docker.com` fallan | El router no tiene internet | Revisar el cable WAN o usar el plan B de la sección 12 |
 | `docker: permission denied` | Falta aplicar el permiso de Docker | Salir con `exit` y volver a entrar por SSH |
-| `/docs` abre en la Pi pero no desde el notebook | El notebook está en otra red | Confirmar que el notebook esté en `PackIA-Linea` y no en la red del colegio |
+| `/docs` abre en la Pi pero no desde el notebook | El notebook está en otra red | Confirmar que el notebook esté en `PackIA-Linea` y no en la red de la universidad |
 | La API responde **422** | El mensaje no cumple el contrato (o la API sigue en v1) | Leer el detalle de la respuesta: dice qué campo falla. Ver la nota de la Fase 3 |
 | Un ESP32 no encuentra la red | Está buscando 5 GHz o la red usa solo WPA3 | Conectarlo a `PackIA-Linea` (2,4 GHz) con WPA2 |
 | Cortes intermitentes por Wi-Fi | Interferencia de otras redes | Pasar ese equipo a cable o fijar un canal en 1.5 (en 2,4 GHz: 1, 6 u 11) |
@@ -583,7 +586,7 @@ No hace falta esperar al switch: las fases 1 a 4 se pueden hacer solo con el rou
 | Riesgo | Qué hacer |
 |---|---|
 | El switch no llega a tiempo | Seguir con 3 estaciones por cable y el resto por Wi-Fi. Priorizar el cable para E2 y E3. |
-| La red del colegio no permite conectar el router al WAN | Plan B: compartir internet desde un celular por cable USB o Wi-Fi a la Pi solo durante la instalación (Fase 2.6). Después la línea funciona sin internet. |
+| La red de la universidad no permite conectar el router al WAN | Plan B: compartir internet desde un celular por cable USB o Wi-Fi a la Pi solo durante la instalación (Fase 2.6). Después la línea funciona sin internet. |
 | Una estación no tiene puerto de red (por ejemplo un Arduino Uno) | Ethernet Shield, equipo intermedio por USB o ESP32 por Wi-Fi (ver `conexion-estaciones.md`). |
 | La IP de la Pi cambia | Reservarla en el router (2.5) y no depender de la IP automática. |
 | Alguien cambia la configuración del router | La clave de administrador la conoce solo el equipo, y hay respaldo (1.8). |
@@ -597,14 +600,14 @@ Completar al terminar cada fase. **Sin contraseñas.**
 
 | Dato | Valor |
 |---|---|
-| Red del router (IP / máscara) | |
-| Rango DHCP automático | |
+| Red del router (IP / máscara) | `192.168.0.1` / `255.255.255.0` |
+| Rango DHCP automático | `192.168.0.100 – 192.168.0.249` |
 | Nombre Wi-Fi 2,4 GHz / 5 GHz | `PackIA-Linea` / `PackIA-Linea-5G` |
-| Dónde están guardadas las contraseñas | |
-| Dónde está el respaldo del router (fecha) | |
-| Versión del firmware del router | |
-| MAC de la Pi | |
-| IP de la Pi | |
+| Dónde están guardadas las contraseñas | Grupo del equipo |
+| Dónde está el respaldo del router (fecha) | 2026-11-18 (falta anotar dónde quedó el archivo) |
+| Versión del firmware del router | Sin anotar |
+| MAC de la Pi | Pendiente (Fase 2) |
+| IP de la Pi | Pendiente (`192.168.0.10` planificada) |
 | Usuario de la Pi | `packia` |
 | MAC e IP de cada estación | Ver tabla 4.1 |
 

@@ -22,8 +22,8 @@
 |---|---|
 | Medio | Ethernet para todo equipo que tenga puerto. Wi-Fi solo para equipos que no puedan (por ejemplo un ESP32). |
 | Red | Router o switch propio del proyecto, sin internet, solo para la línea. No usar la red del colegio. |
-| IP de la Pi | Fija (reservada en el router), por ejemplo `192.168.10.10`. |
-| Dirección que usa cada estación | `http://192.168.10.10:8000/api/v1/ingest/eX` |
+| IP de la Pi | Fija (reservada en el router): `192.168.0.10` (ver `plan-conexiones.md`, sección 2). |
+| Dirección que usa cada estación | `http://192.168.0.10:8000/api/v1/ingest/eX` |
 | Dashboard | Corre en la misma Pi: `http://localhost:8000/`. |
 
 **Por qué cable:** una caída de Wi-Fi haría que E5 marque "sin señal" en una estación que sí funciona, y en una demo eso se nota. Los mensajes son pequeños, así que la velocidad no es el problema; lo importante es que no se corten. La Pi 5 trae puerto Ethernet y un switch de 5 puertos es barato.

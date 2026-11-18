@@ -67,7 +67,7 @@ Detalle en `docs/avance/registro-conexiones.md` y pasos en `docs/plan/plan-conex
 
 **Material que falta:** cables de red (hoy hay 1; se necesitan al menos 2 más ahora y uno por estación después), teclado USB y switch de 8 puertos.
 
-**Corrección pendiente:** `docs/plan/conexion-estaciones.md` usa `192.168.10.10`; la red real es `192.168.0.x`.
+**Corrección hecha:** `docs/plan/conexion-estaciones.md` ya usa `192.168.0.10` (antes `192.168.10.10`).
 
 ## 6. Decisiones abiertas del equipo
 
