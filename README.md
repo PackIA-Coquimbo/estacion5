@@ -1,176 +1,110 @@
-# Estación 5 - Backend PackIA
+# Estación 5 — Backend PackIA
 
-Backend desarrollado en FastAPI para la ingestión de datos de la Estación 5 del proyecto PackIA. El servicio centraliza la recepción de eventos de las cajas de papayas y valida el formato de cada payload mediante modelos Pydantic antes de aceptar la petición.
+API FastAPI de supervisión y trazabilidad para PackIA. Recibe mensajes v2 de E1, E2, E3, E4 y E6, los conserva en una base de datos y consolida la trazabilidad por lote, grupo y fruta.
 
-## Estado actual del proyecto
+## Estado
 
-La implementación actual incluye:
+- Validación de los contratos v2 de [`docs/formato_datos/`](docs/formato_datos/).
+- Persistencia de lecturas originales y actualización (*upsert*) de frutas.
+- SQLite en modo WAL por defecto; PostgreSQL se configura mediante `DATABASE_URL`.
+- Consultas de lotes, grupos, trazabilidad y métricas.
+- Reglas de anomalías, alertas y estado de las estaciones.
+- Dashboard estático disponible en `/`. Actualmente conserva su simulación propia.
 
-- API REST con FastAPI
-- Endpoint de salud para verificar que el servicio está operativo
-- Endpoints de ingestión para las estaciones E1, E2, E3, E4 y E6
-- Modelos de validación para cada payload usando Pydantic
-- Configuración Docker para levantar la API localmente
-- Esquema SQL base para persistencia relacional de lotes y cajas
+Los contratos JSON son la fuente de verdad. Los mensajes de E1–E4 se asocian a un `id_grupo`; E2–E4 incluyen una lista de frutas. E6 informa el estado de la cinta y no requiere `id_grupo`. Todos los mensajes requieren un `timestamp` ISO 8601 con zona horaria.
 
-## Alcance implementado
+## API
 
-### Endpoints disponibles
-
-| Método | Endpoint | Descripción |
+| Método | Ruta | Descripción |
 |---|---|---|
-| GET | `/` | Verifica que el backend está activo |
-| POST | `/api/v1/ingest/e1` | Ingesta datos de recepción y captura |
-| POST | `/api/v1/ingest/e2` | Ingesta datos de análisis visual de calidad |
-| POST | `/api/v1/ingest/e3` | Ingesta datos de calibre y consistencia física |
-| POST | `/api/v1/ingest/e4` | Ingesta datos de clasificación comercial final |
-| POST | `/api/v1/ingest/e6` | Ingesta datos del estado del carrito |
+| GET | `/` | Dashboard estático |
+| GET | `/docs` | Documentación interactiva de la API |
+| POST | `/api/v1/ingest/e1` … `/e4`, `/e6` | Validar y guardar lecturas |
+| GET | `/api/v1/lotes` | Lotes y cantidad de grupos |
+| GET | `/api/v1/lotes/{id_lote}/grupos?limit=20` | Grupos recientes de un lote; límite de 1 a 100 |
+| GET | `/api/v1/grupos/{id_grupo}` | Datos consolidados de frutas y lecturas del grupo |
+| GET | `/api/v1/metricas?lote={id_lote}` | Métricas generales o filtradas por lote |
+| GET | `/api/v1/alertas?activas=true` | Alertas activas; `activas=false` incluye las resueltas |
+| PATCH | `/api/v1/alertas/{id_alerta}` | Marcar una alerta como resuelta |
+| GET | `/api/v1/estaciones/estado` | Última lectura y estado online/sin señal por estación |
+| GET | `/api/v1/sistema` | Temperatura, CPU y RAM del equipo |
 
-### Validaciones implementadas
+La ingesta responde `201` cuando el mensaje se guardó o era un duplicado exacto, `422` si no cumple el contrato y `409` si un `id_grupo` existente se intenta asociar a otro lote.
 
-Se define un modelo base con los siguientes campos comunes:
+`GET /api/v1/metricas` entrega `frutas_por_hora`, `porcentaje_rechazo`, `conteo_por_categoria`, `conteo_por_tamano` y `anomalias_por_estacion`. Las frutas por hora se agrupan según la primera lectura E4 de cada fruta; el porcentaje de rechazo considera las frutas con categoría E4 registrada.
 
-- `id_lote`
-- `id_caja`
-- `timestamp`
+## Persistencia y configuración
 
-Cada estación tiene un payload específico con datos propios, por ejemplo:
+La aplicación crea las tablas al iniciar. SQLAlchemy conserva cada lectura recibida y evita duplicar el mismo payload. La tabla de frutas tiene clave única `(id_grupo, id_fruta)` y actualiza los campos de E2, E3 o E4 sin borrar los datos de las otras estaciones.
 
-- `E1`: validez de imagen, estado de captura y posición correcta
-- `E2`: calidad visual, confianza visual y defectos detectados
-- `E3`: peso total, nivel de llenado, cantidad de frutas visibles y consistencia física
-- `E4`: categoría final, probabilidad y revisión manual
-- `E6`: estado del carrito, posición actual y falla mecánica
-
-## Estructura del proyecto
+Sin configuración adicional, la base es `sqlite:///./e5.db` en modo WAL. En Docker Compose, el valor predeterminado es `sqlite:////app/data/e5.db` y se conserva en el volumen `e5_datos`. Para usar PostgreSQL, configura `DATABASE_URL`, por ejemplo:
 
 ```text
-estacion5-backend/
-├── app/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── schemas.py
-│   └── script.sql
-├── docs/
-│   ├── formato_datos/      # contratos JSON v2 por estación (fuente de verdad)
-│   └── plan/               # plan general y planes por rol
-├── frontend/               # dashboard (HTML, CSS y JS)
-├── tests/                  # pytest: contratos e ingesta
-├── tools/
-│   └── simulador.py        # simula las estaciones E1–E4 y E6
-├── Dockerfile
-├── docker-compose.yml          # configuración base (Raspberry Pi)
-├── docker-compose.override.yml # ajustes de desarrollo (--reload)
-├── .env.example
-├── requirements.txt
-├── requirements-dev.txt        # pytest y httpx
-├── README.md
-└── .gitignore
+postgresql+psycopg://usuario:clave@servidor:5432/estacion5
 ```
 
-### Archivos principales
+Umbrales de alertas:
 
-- `app/main.py`: definición de la aplicación FastAPI y endpoints de ingestión.
-- `app/schemas.py`: modelos Pydantic con la estructura de cada payload.
-- `app/script.sql`: esquema base para tablas de lote y caja.
-- `docker-compose.yml`: servicio del backend con reinicio automático, `healthcheck` y volumen persistente para la base de datos.
-- `docker-compose.override.yml`: solo para desarrollo; agrega `--reload` y monta el código.
-- `Dockerfile`: imagen de producción (sin `--reload`).
-- `docs/formato_datos/`: contratos de datos v2; ver su [README](docs/formato_datos/README.md).
-- `tools/simulador.py`: envía datos simulados de las estaciones a la API.
+- Confianza mínima E2: `0.70`.
+- Tendencia E2: 3 o más confianzas bajas entre las últimas 12 frutas.
+- Diferencia máxima de diámetro por grupo: `15` mm.
+- Tiempo sin señal con la cinta en marcha: `30` s.
 
-## Ejecución local
+Los umbrales se definen en `app/config.py`.
 
-### Opción 1: Docker Compose (desarrollo)
+La temperatura del sistema se devuelve como `null` cuando el equipo no expone sensores compatibles. CORS permite cualquier origen para facilitar la integración en la red local; no se ha agregado autenticación.
+
+## Ejecución
+
+### Desarrollo con Docker Compose
 
 ```bash
 docker compose up --build
 ```
 
-Docker suma automáticamente `docker-compose.override.yml`, así que los cambios en `app/` y `frontend/` se recargan sin reconstruir la imagen. Para cambiar el puerto, la base de datos o la zona horaria, copiar `.env.example` como `.env` y editarlo.
+Compose incluye automáticamente `docker-compose.override.yml` para recarga en caliente. La API queda disponible en `http://localhost:8000/` y `http://localhost:8000/docs`.
 
-La API queda disponible en:
+### Ejecución directa
 
-- `http://localhost:8000/`
-- `http://localhost:8000/docs` (Swagger UI)
+Requiere Python 3.11:
 
-Para detenerla: `docker compose down` (agregar `-v` borra también la base de datos).
-
-### Opción 2: Ejecutar directamente con uvicorn
-
-```bash
+```powershell
+py -3.11 -m venv .venv
+.venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### Raspberry Pi 5 (producción)
+### Raspberry Pi 5
 
-Requiere Raspberry Pi OS de 64 bits con Docker instalado. Se usa solo el archivo base, sin el override de desarrollo:
+Usa solo el Compose base, sin el modo de recarga de desarrollo:
 
 ```bash
 docker compose -f docker-compose.yml up -d --build
-docker compose -f docker-compose.yml ps     # debe indicar "healthy"
+docker compose -f docker-compose.yml ps
 ```
 
-El contenedor se reinicia solo si se cae o si la Pi se reinicia (`restart: unless-stopped`), y la base SQLite queda en el volumen `e5_datos`. *Pendiente: aún no se ha probado en la Pi real.*
-
-## Contratos de datos
-
-Los mensajes que envía cada estación están en [`docs/formato_datos/`](docs/formato_datos/) (versión 2: un mensaje por grupo de frutas). Son la fuente de verdad: si un campo cambia, se actualiza primero el contrato y se avisa al equipo.
+El servicio usa el volumen `e5_datos` y `restart: unless-stopped`. El despliegue aún debe validarse en una Raspberry Pi real.
 
 ## Pruebas
 
-```bash
+```powershell
 py -3.11 -m venv .venv
-.venv\Scripts\activate            # en Linux o macOS: source .venv/bin/activate
+.venv\Scripts\activate
 pip install -r requirements-dev.txt
 pytest -q
 ```
 
-- `tests/test_contratos.py`: valida los JSON de `docs/formato_datos/` y los mensajes del simulador.
-- `tests/test_ingesta.py`: cada contrato responde 201 y los mensajes inválidos responden 422. **Se saltan** mientras `app/schemas.py` siga en v1 y se activan solos con los schemas v2.
+`tests/test_contratos.py` valida los contratos y el simulador; `tests/test_ingesta.py` verifica respuestas `201` y `422` para los mensajes válidos e inválidos.
 
-## Simulador de estaciones
+## Simulador
 
-Envía grupos de 2 a 5 frutas por E1 → E2 → E3 → E4 y el estado de la cinta (E6) a la API, para probar sin depender de las otras estaciones. Requiere `requirements-dev.txt`.
+`tools/simulador.py` envía grupos coherentes de 2 a 5 frutas por E1–E4 y el estado de cinta por E6:
 
 ```bash
-python tools/simulador.py --dry-run --grupos 2            # solo imprime los JSON
-python tools/simulador.py --grupos 20                     # envía a http://localhost:8000
-python tools/simulador.py --url http://IP-DE-LA-PI:8000 --grupos 0   # sin fin (Ctrl+C para detener)
+python tools/simulador.py --dry-run --grupos 2
+python tools/simulador.py --grupos 20 --velocidad 2
+python tools/simulador.py --rangos 92,112
 ```
 
-| Opción | Efecto |
-|---|---|
-| `--velocidad 2` | el doble de rápido |
-| `--falla-cinta` | la cinta falla a mitad de la simulación y luego se recupera |
-| `--sin-e3` | E3 no envía (estación caída) |
-| `--baja-confianza` | parte de las frutas de E2 con confianza < 0,70 |
-| `--duplicados` | cada mensaje se envía dos veces |
-| `--rangos 92,112` | cortes de diámetro en mm para pequeño, mediano y grande (por defecto `35,45`) |
-| `--semilla 7` | repite exactamente la misma simulación |
-
-Al terminar muestra cuántos mensajes fueron aceptados y cuántos tuvieron error.
-
-## Observaciones de diseño
-
-El backend ya ofrece la capa de API y validación de entrada requerida para la ingestión de datos de la Estación 5. En la implementación actual, la lógica de persistencia en base de datos aún está preparada como base estructural a nivel de esquema (`script.sql`), pero no se ha conectado todavía a una BD real ni se han implementado operaciones de almacenamiento persistente dentro del servicio.
-
-Esto significa que, por ahora, el sistema funciona como API de recepción y validación de payloads, con la base para integrar la persistencia en fases posteriores.
-
-## Tecnologías utilizadas
-
-- Python 3.11
-- FastAPI
-- Pydantic
-- Uvicorn
-- Docker / Docker Compose
-
-## Próximo alcance sugerido
-
-- Conexión real con base de datos relacional
-- Persistencia de eventos por estación y caja
-- Registro de lotes/cajas con trazabilidad
-- Validaciones de negocio más específicas por estación
-- Endpoints de consulta y consulta histórica
-- Mecanismo de autenticación y seguridad para exposición externa
+`--duplicados` reenvía cada mensaje para verificar idempotencia; `--falla-cinta` y `--baja-confianza` permiten probar las alertas. Consulta `python tools/simulador.py --help` para todas las opciones.
