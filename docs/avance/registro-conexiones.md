@@ -1,7 +1,7 @@
 # Registro de avance — Conexiones de la línea
 
 **Jornada:** miércoles 18 de noviembre de 2026, en la universidad · **Plan que se sigue:** [`docs/plan/plan-conexiones.md`](../plan/plan-conexiones.md)
-**Última actualización:** 2026-11-18, 17:50 (hora de Chile)
+**Última actualización:** 2026-11-18, cierre de la jornada (hora de Chile)
 
 > Registro de lo que se hizo en cada fase del plan de conexiones, lo que salió distinto a lo planeado y lo que falta. **Sin contraseñas.** Las claves se guardan en el grupo del equipo.
 
@@ -10,7 +10,7 @@
 ## 1. Resumen
 
 - ✅ **Fase 1 (router): lista.** Router configurado desde cero, con internet desde la red de la U y respaldo guardado.
-- ⏳ **Fase 2 (Pi + API): en curso.** Se está grabando Raspberry Pi OS en un **pendrive** (no hay lector de microSD).
+- ⏳ **Fase 2 (Pi + API): sin empezar.** Se revisó el material y se decidió cómo hacerla (sección 3), pero todavía no se graba el sistema ni se enciende la Pi.
 - Fases 3 a 7: pendientes.
 
 ## 2. Fase 1 — Router
@@ -29,25 +29,27 @@
 | 1.7 Reinicios | Actualización automática y reinicio programado desactivados. |
 | 1.8 Respaldo | Hecho. |
 
-## 3. Fase 2 — Pi en la red (en curso)
+## 3. Fase 2 — Pi en la red (sin empezar)
+
+No se ha avanzado en esta fase. Al revisar el material se encontraron dos problemas y se acordó cómo resolverlos cuando se retome.
 
 **Problemas encontrados:**
 
 - La microSD de la Pi tiene un proyecto anterior (se puede borrar), pero **no hay lector de microSD** para regrabarla.
 - Hay **un solo cable de red**, y está ocupado en el WAN (internet de la U).
 
-**Solución elegida:** grabar Raspberry Pi OS (64-bit) en un **pendrive** desde un notebook con Raspberry Pi Imager, sacar la microSD de la Pi y arrancar desde el pendrive. Mientras no haya otro cable, la Pi se conecta **por Wi-Fi** a `PackIA-Linea-5G`.
+**Solución acordada (por aplicar):** grabar Raspberry Pi OS (64-bit) en un **pendrive** desde un notebook con Raspberry Pi Imager, sacar la microSD de la Pi y arrancar desde el pendrive. Mientras no haya otro cable, la Pi se conecta **por Wi-Fi** a `PackIA-Linea-5G`.
 
-Ajustes usados en el Imager: hostname `e5-pi`, usuario `packia`, Wi-Fi `PackIA-Linea-5G` (país CL), zona `America/Santiago`, SSH activado.
+Ajustes que se usarán en el Imager: hostname `e5-pi`, usuario `packia`, Wi-Fi `PackIA-Linea-5G` (país CL), zona `America/Santiago`, SSH activado.
 
 **Diferencias con el plan:**
 
-| Plan | Lo que se hizo | Cuándo volver al plan |
+| Plan | Lo que se hará | Cuándo volver al plan |
 |---|---|---|
 | Sistema en la microSD | Sistema en un pendrive | Opcional: copiar a la microSD con *SD Card Copier* desde la Pi. |
 | Pi por cable en LAN 1, sin Wi-Fi | Pi por Wi-Fi | Cuando haya un segundo cable: conectar a LAN y reservar la `.10` con la MAC **de la tarjeta de red cableada** (es distinta a la del Wi-Fi). |
 
-**Siguientes pasos:** 2.2 arrancar la Pi desde el pendrive → 2.3 encontrarla en *Clients* → 2.4 SSH → 2.5 reservar `192.168.0.10` → 2.6 Docker → 2.7 API → 2.8 y 2.9 pruebas.
+**Siguientes pasos:** 2.1 grabar el pendrive con Raspberry Pi Imager → 2.2 arrancar la Pi desde el pendrive → 2.3 encontrarla en *Clients* → 2.4 SSH → 2.5 reservar `192.168.0.10` → 2.6 Docker → 2.7 API → 2.8 y 2.9 pruebas.
 
 ## 4. Pendientes y material que falta
 
