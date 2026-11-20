@@ -22,7 +22,7 @@ Encontrado al levantar la API con Python 3.11 y alimentarla con `tools/simulador
 - [ ] **Los grupos nunca se cierran.** Todo grupo queda con `estado = "en_proceso"` y `salida = null`, aunque haya pasado por E4: el modelo los crea así (`app/models.py`, campos `estado` y `salida`) y ninguna parte de `app/main.py` los cambia. Sin esto no funcionan el historial ni los estados Aprobado / Con anomalía / Con rechazo. **Prioridad alta.**
 - [ ] **El estado de la cinta (E6) no se puede consultar.** Se guarda en `EventoCinta`, pero ninguna ruta `GET` lo devuelve. `GET /api/v1/estaciones/estado` solo trae `estacion`, `estado`, `ultima_lectura` y `segundos_desde_lectura`. El aviso de "cinta detenida" del dashboard lo necesita. **Prioridad alta.**
 - [ ] **Detalle por fruta en la lista de grupos.** `GET /api/v1/lotes/{id}/grupos` no trae las frutas (categoría, tamaño, diámetro), el diámetro medio ni la uniformidad, que usa la tabla "Últimos grupos". **Prioridad alta.**
-- [ ] **Los tests escriben en el archivo real `./e5.db`** en vez de una base de datos en memoria, como pedía el plan. Revisar `tests/conftest.py` (también es área de Maicol).
+- [x] **Los tests escriben en el archivo real `./e5.db`** en vez de una base de datos en memoria, como pedía el plan. Revisar `tests/conftest.py` (también es área de Maicol). → Resuelto por Maicol en `tests/conftest.py` (rama `feat/b-test-persistencia`, PR pendiente).
 - [ ] Datos menores que espera el dashboard: grupos del turno y de la última hora en `/metricas`; grupo actual y severidad de la última lectura por estación; alertas de un grupo en `/grupos/{id}`.
 - [ ] Descripción del PR #13 (está vacía): qué se hizo y cómo probarlo.
 - [ ] Opcional (se recorta primero): `GET /api/v1/stream` con SSE.
@@ -30,8 +30,8 @@ Encontrado al levantar la API con Python 3.11 y alimentarla con `tools/simulador
 ## 3. Maicol (B) — Integración
 
 - [ ] Enviar los contratos v2 a E1–E4 y E6 y cerrar las preguntas abiertas (`docs/formato_datos/README.md`): quién asigna `id_grupo` e `id_fruta`, **rangos de diámetro de E3**, lista de defectos de E2 y frecuencia de E6.
-- [ ] Tests de comportamiento ahora que existe la persistencia: duplicados sin filas nuevas, mensajes en desorden, consultas y reglas.
-- [ ] Usar una base de datos en memoria en `tests/conftest.py` (ver sección 2).
+- [x] Tests de comportamiento ahora que existe la persistencia: duplicados sin filas nuevas, mensajes en desorden, consultas y reglas. → `tests/test_persistencia.py`, `tests/test_consultas.py`, `tests/test_reglas.py` (rama `feat/b-test-persistencia`, PR pendiente).
+- [x] Usar una base de datos en memoria en `tests/conftest.py` (ver sección 2). → SQLite en memoria con `StaticPool`, `get_db` sobrescrito y lifespan sin el engine real (rama `feat/b-test-persistencia`, PR pendiente).
 - [ ] Probar `docker compose -f docker-compose.yml up -d --build` **en la Pi** (fase 2 de conexiones).
 - [ ] Bitácora `docs/trelo/semana3.md`.
 - [ ] Primera prueba real con E4 y E6 → `docs/integracion/semana5.md`.

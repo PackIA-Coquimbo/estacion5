@@ -3,23 +3,14 @@
 Cada JSON de docs/formato_datos debe responder 201; un mensaje con un campo
 faltante, un valor fuera de rango o una estación equivocada debe responder 422.
 
-Se saltan mientras app/schemas.py siga en v1 (por caja). Se activan solos
-cuando entren los schemas v2 de A.
+Corren contra la base SQLite en memoria de tests/conftest.py.
 """
 
 import copy
 
 import pytest
 
-from app import schemas
 from conftest import ESTACIONES
-
-SCHEMAS_V2 = "id_grupo" in schemas.E1Payload.model_fields
-
-pytestmark = pytest.mark.skipif(
-    not SCHEMAS_V2,
-    reason="app/schemas.py sigue en v1; esperando schemas v2 de A (feat/a-contratos-v2)",
-)
 
 
 def ruta(estacion: str) -> str:
