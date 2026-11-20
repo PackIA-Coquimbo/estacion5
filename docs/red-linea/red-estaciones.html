@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>body{margin:0;font:14px system-ui,sans-serif}[hidden]{display:none!important}</style>
+<title>Red de Estación 5 v2</title>
+<style>
+  /* Layout: título corto, maqueta 3D de la línea a todo el ancho, debajo 4 pasos del viaje de un dato,
+     y al final leyenda + tabla de estaciones lado a lado. Sin fuentes externas (funciona offline). */
+  :root {
+    --bg: #EEF1F5;
+    --panel: #FFFFFF;
+    --ink: #18212B;
+    --muted: #5B6875;
+    --line: #D5DCE4;
+    --orange: #F07A1A; --orange-dark: #C95D0A; --orange-in: #D96A12;
+    --clamp: #1E5FD8; --clamp-edge: #123E94;
+    --tube: #8C959F; --tube-edge: #5A636D; --cable: #FFFFFF;
+    --signal: #0E9F8E;
+    --pi: #2F9E5B; --pi-top: #3DB86D; --pi-side: #23784A;
+    --alu: #C9D1DA; --alu-dark: #6F7C8B;
+    --glass-front: rgba(140, 185, 225, .12); --glass-top: rgba(170, 205, 235, .30); --glass-back: rgba(120, 165, 210, .10);
+    --dev: #2C3744; --dev-side: #1F2833; --dev-top: #3B4856;
+    --belt: #2A3038; --belt-top: #3B434D; --slat: #555F6B;
+    --screen: #101A26; --screen-ink: #D7E2EE; --screen-dim: #6F8094;
+    --floor: rgba(40, 70, 110, .08);
+    --font-display: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    --font-body: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    --font-mono: ui-monospace, "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0E141B; --panel: #151E28; --ink: #DCE4EE; --muted: #93A1B2; --line: #263445;
+      --orange: #FF8A30; --orange-dark: #D06612; --orange-in: #B85A10;
+      --clamp: #4C8DFF; --clamp-edge: #2A5FC4;
+      --tube: #7D8792; --tube-edge: #4C5560; --cable: #EEF3F8;
+      --signal: #2DD4BF;
+      --pi: #2F9E5B; --pi-top: #44C477; --pi-side: #1E6B40;
+      --alu: #8996A5; --alu-dark: #3A4757;
+      --glass-front: rgba(110, 160, 215, .07); --glass-top: rgba(140, 185, 230, .16); --glass-back: rgba(110, 160, 215, .06);
+      --dev: #3A4756; --dev-side: #2B3644; --dev-top: #4A5868;
+      --belt: #1A1F25; --belt-top: #2A3139; --slat: #3E4853;
+      --screen: #070D14; --screen-ink: #D7E2EE; --screen-dim: #66778B;
+      --floor: rgba(120, 160, 210, .06);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0E141B; --panel: #151E28; --ink: #DCE4EE; --muted: #93A1B2; --line: #263445;
+    --orange: #FF8A30; --orange-dark: #D06612; --orange-in: #B85A10;
+    --clamp: #4C8DFF; --clamp-edge: #2A5FC4;
+    --tube: #7D8792; --tube-edge: #4C5560; --cable: #EEF3F8;
+    --signal: #2DD4BF;
+    --pi: #2F9E5B; --pi-top: #44C477; --pi-side: #1E6B40;
+    --alu: #8996A5; --alu-dark: #3A4757;
+    --glass-front: rgba(110, 160, 215, .07); --glass-top: rgba(140, 185, 230, .16); --glass-back: rgba(110, 160, 215, .06);
+    --dev: #3A4756; --dev-side: #2B3644; --dev-top: #4A5868;
+    --belt: #1A1F25; --belt-top: #2A3139; --slat: #3E4853;
+    --screen: #070D14; --screen-ink: #D7E2EE; --screen-dim: #66778B;
+    --floor: rgba(120, 160, 210, .06);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--font-body);
+    padding-block: 28px 44px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 20px; }
+  .eyebrow { font: 500 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  h1 { font: 700 clamp(1.5rem, 1.1rem + 1.6vw, 2.2rem)/1.15 var(--font-display); margin: 8px 0 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .sub { margin: 10px 0 0; color: var(--muted); max-width: 64ch; line-height: 1.55; font-size: 15px; }
+  .sub b { color: var(--ink); font-weight: 600; }
+
+  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 10px; }
+  .scroll { overflow-x: auto; }
+  svg.plan { display: block; width: 100%; min-width: 980px; height: auto; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 20px; align-items: center; padding: 12px 4px 2px; font-size: 14px; border-top: 1px solid var(--line); margin-top: 6px; }
+  .controls label { display: inline-flex; gap: 8px; align-items: center; cursor: pointer; }
+  .controls input { accent-color: var(--clamp); width: 16px; height: 16px; margin: 0; }
+  .controls input:focus-visible, .btn:focus-visible { outline: 2px solid var(--clamp); outline-offset: 2px; }
+  .btn { font: 500 14px var(--font-body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  .btn:hover { border-color: var(--muted); }
+  .controls .hint { color: var(--muted); margin-left: auto; font-size: 13px; }
+
+  /* maqueta */
+  .floor { fill: var(--floor); }
+  .alu-o { fill: none; stroke: var(--orange-dark); stroke-width: 8; stroke-linecap: round; }
+  .alu-i { fill: none; stroke: var(--orange); stroke-width: 5; stroke-linecap: round; }
+  .alu-back { fill: none; stroke: var(--orange-dark); stroke-width: 4; stroke-linecap: round; opacity: .6; }
+  .g-front { fill: var(--glass-front); } .g-top { fill: var(--glass-top); } .g-back { fill: var(--glass-back); }
+  .side { fill: var(--glass-top); }
+  .side-in { fill: var(--glass-back); }
+  .clamp { fill: var(--clamp); stroke: var(--clamp-edge); stroke-width: 1.5; }
+  .bolt { fill: #FFFFFF; opacity: .85; }
+  .station { cursor: pointer; outline: none; }
+  .station:focus-visible .alu-i { stroke: var(--clamp); }
+  .flash { fill: var(--signal); opacity: 0; pointer-events: none; }
+  .station .flash { fill: var(--signal); opacity: 0; transition: opacity .6s; pointer-events: none; }
+  .station.on .flash { opacity: .18; transition: opacity .08s; }
+  .p-front { fill: var(--pi); } .p-side { fill: var(--pi-side); } .p-top { fill: var(--pi-top); }
+  .d-front { fill: var(--dev); } .d-side { fill: var(--dev-side); } .d-top { fill: var(--dev-top); }
+  .led { fill: #4B5866; transition: fill .2s; }
+  .led.on { fill: #7CFFB0; }
+  .tag { font: 700 26px var(--font-display); fill: var(--ink); text-anchor: middle; }
+  .role { font: 600 11px var(--font-mono); fill: var(--muted); text-anchor: middle; letter-spacing: .06em; text-transform: uppercase; }
+  .b-front { fill: var(--belt); } .b-top { fill: var(--belt-top); } .slat { stroke: var(--slat); stroke-width: 2; }
+  .leg { stroke: var(--alu-dark); stroke-width: 5; stroke-linecap: round; }
+  .tube-edge { fill: none; stroke: var(--tube-edge); stroke-width: 17; stroke-linejoin: round; stroke-linecap: round; }
+  .tube-core { fill: none; stroke: var(--tube); stroke-width: 11; stroke-linejoin: round; stroke-linecap: round; transition: opacity .3s; }
+  .tube-hi { fill: none; stroke: #FFFFFF; stroke-opacity: .3; stroke-width: 2; stroke-linejoin: round; transition: opacity .3s; }
+  .cable { fill: none; stroke: var(--cable); stroke-width: 2.5; stroke-dasharray: 1 5; stroke-linecap: round; opacity: 0; transition: opacity .3s; }
+  .show-cable .cable { opacity: 1; }
+  .show-cable .tube-core { opacity: .3; }
+  .show-cable .tube-hi { opacity: 0; }
+  .patch { fill: none; stroke: var(--signal); stroke-width: 2.5; stroke-linecap: round; }
+  .antenna { stroke: var(--dev); stroke-width: 3; stroke-linecap: round; }
+  .scr { fill: var(--screen); }
+  .bezel { fill: none; stroke: var(--dev); stroke-width: 5; stroke-linejoin: round; }
+  .bezel.pulse { animation: pulse .9s ease-out; }
+  @keyframes pulse { from { stroke: var(--signal); } to { stroke: var(--dev); } }
+  .st { font: 600 10px var(--font-mono); fill: var(--screen-ink); }
+  .st-dim { font: 400 9px var(--font-mono); fill: var(--screen-dim); }
+  .st-head { font: 700 10px var(--font-display); fill: var(--screen-ink); letter-spacing: .06em; }
+  .sdot { fill: #3B4A5B; transition: fill .2s; } .sdot.on { fill: var(--signal); }
+  .packet { fill: var(--signal); stroke: #FFFFFF; stroke-width: 2; }
+  .halo { fill: var(--signal); opacity: .3; }
+  .state { font: 600 11px var(--font-mono); fill: var(--muted); text-anchor: middle; }
+  .state.busy { fill: var(--orange-dark); }
+  .state.done { fill: var(--signal); }
+  .callout { font: 600 12px var(--font-body); fill: var(--ink); }
+  .callout-sub { font: 400 11px var(--font-body); fill: var(--muted); }
+  .callout-line { stroke: var(--muted); stroke-width: 1.2; fill: none; }
+  .callout-dot { fill: var(--muted); }
+
+  /* pasos */
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; counter-reset: s; }
+  .steps li { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 12px; align-items: start; }
+  .steps li::before { counter-increment: s; content: counter(s); grid-row: span 2; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--panel); font: 700 14px/28px var(--font-display); text-align: center; }
+  .steps b { font: 600 15px var(--font-display); }
+  .steps span { color: var(--muted); font-size: 13.5px; line-height: 1.45; }
+
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 20px; }
+  @media (max-width: 880px) { .cols { grid-template-columns: minmax(0, 1fr); } }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+  .card h2 { font: 700 16px var(--font-display); margin: 0 0 12px; }
+  .key { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 14px; }
+  .key li { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 12px; align-items: center; }
+  .key small { display: block; color: var(--muted); font-size: 12.5px; }
+  .sw { height: 16px; border-radius: 4px; }
+  .sw.orange { background: var(--orange); border: 2px solid var(--orange-dark); }
+  .sw.clamp { width: 16px; justify-self: center; background: var(--clamp); border: 2px solid var(--clamp-edge); }
+  .sw.tube { height: 12px; border-radius: 7px; background: var(--tube); border: 3px solid var(--tube-edge); }
+  .sw.pi { width: 26px; justify-self: center; background: var(--pi); border: 2px solid var(--pi-side); }
+  .sw.dot { width: 14px; height: 14px; border-radius: 50%; justify-self: center; background: var(--signal); }
+  .tbl { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 12px 8px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-weight: 500; color: var(--muted); font-size: 12px; border-top: 0; }
+  td:first-child { font-family: var(--font-display); font-weight: 700; }
+  td code { font: 400 12px var(--font-mono); overflow-wrap: anywhere; }
+  tr.hub td { background: color-mix(in srgb, var(--signal) 9%, transparent); }
+  .last { margin-top: 14px; font: 400 12.5px/1.5 var(--font-mono); color: var(--muted); min-height: 3em; overflow-wrap: anywhere; }
+  .last b { color: var(--signal); font-weight: 600; }
+  .foot { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { .bezel.pulse { animation: none; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">PackIA · Red de la línea · Versión 2</div>
+    <h1>Cada estación envía sus datos a E5 por un tubo bajo la cinta</h1>
+    <p class="sub">Todas las estaciones tienen una <b>Raspberry Pi</b> abajo. Su cable de red baja al <b>tubo gris del piso</b>, corre bajo la cinta y llega a E5, donde el <b>router</b> lo entrega a la <b>Pi 5</b> que guarda y muestra los datos.</p>
+  </header>
+
+  <section class="stage" aria-label="Maqueta de la línea">
+    <div class="scroll">
+      <svg class="plan" id="plan" viewBox="0 0 1480 440" role="img" aria-label="Cinta transportadora que pasa por las estaciones E1 a E4, con E6 al inicio y E5 al final. Cada estación tiene una Raspberry Pi abajo; los cables van por un tubo en el piso, bajo la cinta, hasta el router y la Raspberry Pi 5 de E5. Las estaciones tienen lados naranjos y abrazaderas azules en las esquinas."></svg>
+    </div>
+    <div class="controls">
+      <button type="button" class="btn" id="btnRun">Pausar cinta</button>
+      <label><input type="checkbox" id="optCable"> Ver el cable dentro del tubo</label>
+      <span class="hint" id="now" aria-live="polite">Cargando…</span>
+    </div>
+  </section>
+
+  <ol class="steps" aria-label="Cómo viaja un dato">
+    <li><b>Pasa la fruta</b><span>Un grupo de 3 frutas entra en E1. La cinta se detiene en cada estación.</span></li>
+    <li><b>La Pi mide</b><span>La estación hace su trabajo. Al terminar, su Raspberry Pi envía el resultado.</span></li>
+    <li><b>Baja al tubo</b><span>El cable sale por abajo de la estación y corre por el tubo bajo la cinta.</span></li>
+    <li><b>Llega a E5</b><span>La Pi 5 guarda y muestra el dato. Mientras, la cinta lleva el grupo a la siguiente estación.</span></li>
+  </ol>
+
+  <div class="cols">
+    <section class="card">
+      <h2>Qué es cada cosa</h2>
+      <ul class="key">
+        <li><i class="sw orange"></i><span>Marco de tubos PVC<small>Tubos naranjos que forman cada estación.</small></span></li>
+        <li><i class="sw clamp"></i><span>Abrazadera<small>Pieza azul que une los tubos PVC en cada esquina.</small></span></li>
+        <li><i class="sw tube"></i><span>Tubo de cables<small>Va por el piso, bajo la cinta. Nada pasa por detrás.</small></span></li>
+        <li><i class="sw pi"></i><span>Raspberry Pi<small>Una por estación, debajo de la cinta.</small></span></li>
+        <li><i class="sw dot"></i><span>Mensaje en camino<small>Un POST de JSON hacia la API de E5.</small></span></li>
+      </ul>
+    </section>
+    <section class="card">
+      <h2>Estaciones</h2>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Estación</th><th>Qué hace</th><th>Equipo</th><th>Envía a</th></tr></thead>
+          <tbody>
+            <tr><td>E6</td><td>Mueve la cinta</td><td>Raspberry Pi</td><td><code>/api/v1/ingest/e6</code></td></tr>
+            <tr><td>E1</td><td>Recepción del grupo</td><td>Raspberry Pi</td><td><code>/api/v1/ingest/e1</code></td></tr>
+            <tr><td>E2</td><td>Calidad visual</td><td>Raspberry Pi</td><td><code>/api/v1/ingest/e2</code></td></tr>
+            <tr><td>E3</td><td>Diámetro y tamaño</td><td>Raspberry Pi</td><td><code>/api/v1/ingest/e3</code></td></tr>
+            <tr><td>E4</td><td>Categoría final</td><td>Raspberry Pi</td><td><code>/api/v1/ingest/e4</code></td></tr>
+            <tr class="hub"><td>E5</td><td>Recibe, guarda y muestra</td><td>Pi 5 + router</td><td>Recibe todo</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="last" id="last" aria-live="polite">Último mensaje: esperando…</p>
+    </section>
+  </div>
+  <p class="foot">Supuesto de esta versión: todas las estaciones usan Raspberry Pi (puede cambiar). Todo funciona sin internet, dentro de la red local del router. Los grupos, tiempos y valores que aparecen son de ejemplo. El largo de los tubos se ajusta cuando se fije el lugar de cada estación.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var NS = "http://www.w3.org/2000/svg";
+  var svg = document.getElementById("plan");
+
+  /* Proyección oblicua: x a lo largo de la línea, y altura, z profundidad (0 = frente). */
+  var OX = 330, OY = 362, KX = 0.5, KY = 0.32;
+  function P(x, y, z) { return [OX + x + KX * z, OY - y - KY * z]; }
+  function pts(list) { return list.map(function (p) { var q = P(p[0], p[1], p[2]); return q[0].toFixed(1) + "," + q[1].toFixed(1); }).join(" "); }
+  function d3(list) { return list.map(function (p, i) { var q = P(p[0], p[1], p[2]); return (i ? "L" : "M") + q[0].toFixed(1) + " " + q[1].toFixed(1); }).join(""); }
+  function el(tag, attrs, parent) {
+    var e = document.createElementNS(NS, tag);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  function poly(list, cls, parent) { return el("polygon", { points: pts(list), "class": cls }, parent); }
+  function line(a, b, cls, parent) { return el("path", { d: d3([a, b]), "class": cls }, parent); }
+  function xy(q) { return { cx: q[0].toFixed(1), cy: q[1].toFixed(1) }; }
+  function solid(x0, x1, y0, y1, z0, z1, pre, parent) {
+    var g = el("g", {}, parent);
+    poly([[x1, y0, z0], [x1, y0, z1], [x1, y1, z1], [x1, y1, z0]], pre + "-side", g);
+    poly([[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], pre + "-top", g);
+    poly([[x0, y0, z0], [x1, y0, z0], [x1, y1, z0], [x0, y1, z0]], pre + "-front", g);
+    return g;
+  }
+
+  var defs = el("defs", {}, svg);
+  [["frO", "#FFD3A1", "#F2871E", "#A6510A"], ["fr0", "#F7A79C", "#D8402F", "#8E2318"], ["fr1", "#FFD38A", "#F0A12E", "#A9620E"], ["fr2", "#C9E59A", "#79B33B", "#3F6E17"]].forEach(function (c) {
+    var g = el("radialGradient", { id: c[0], cx: "35%", cy: "32%", r: "70%" }, defs);
+    el("stop", { offset: "0", "stop-color": c[1] }, g);
+    el("stop", { offset: ".55", "stop-color": c[2] }, g);
+    el("stop", { offset: "1", "stop-color": c[3] }, g);
+  });
+
+  /* Medidas */
+  var SD = 120, SH = 250, SIDE_Y0 = 140;            /* lados naranjos desde sobre la cinta hasta el techo */
+  var BELT_Y = 100, BELT_X0 = -5, BELT_X1 = 815;
+  var TY = 9, TZ = 58;                               /* tubo en el piso, bajo la cinta */
+  var ST = [
+    { id: "E1", role: "Recepción", route: "/api/v1/ingest/e1", x0: 0 },
+    { id: "E2", role: "Calidad visual", route: "/api/v1/ingest/e2", x0: 205 },
+    { id: "E3", role: "Diámetro", route: "/api/v1/ingest/e3", x0: 410 },
+    { id: "E4", role: "Clasificación", route: "/api/v1/ingest/e4", x0: 615 }
+  ];
+  ST.forEach(function (s) { s.x1 = s.x0 + 145; s.h = SH; s.cx = s.x0 + 72; s.belt = true; });
+  var E6 = { id: "E6", role: "Cinta", route: "/api/v1/ingest/e6", x0: -205, x1: -60, h: SH, cx: -133, belt: true };
+  var E5 = { id: "E5", role: "Recibe y muestra", x0: 885, x1: 1065, h: SH, cx: 975 };
+  var SEND = ST.concat([E6]);                        /* índices 0..3 = E1..E4, 4 = E6 */
+
+  var L = {};
+  ["floor", "back", "legsBack", "pis", "tubes", "legsFront", "belt", "fruit", "front", "e5", "packets", "labels"].forEach(function (n) { L[n] = el("g", {}, svg); });
+
+  /* Piso */
+  poly([[-250, 0, -16], [1100, 0, -16], [1100, 0, 140], [-250, 0, 140]], "floor", L.floor);
+
+  /* Abrazaderas azules: cuadradito con perno en la esquina */
+  function clamp(p, parent, size) {
+    var q = P(p[0], p[1], p[2]), s = size || 13;
+    el("rect", { x: (q[0] - s / 2).toFixed(1), y: (q[1] - s / 2).toFixed(1), width: s, height: s, rx: 2.5, "class": "clamp" }, parent);
+    el("circle", { cx: q[0].toFixed(1), cy: q[1].toFixed(1), r: 1.8, "class": "bolt" }, parent);
+  }
+
+  /* Marco de estación: perfiles, vidrio adelante y arriba, lados naranjos, abrazaderas en las esquinas */
+  function frame(s, sideY0, frontGroup) {
+    var x0 = s.x0, x1 = s.x1, z1 = SD, h = s.h;
+    poly([[x0, 0, z1], [x1, 0, z1], [x1, h, z1], [x0, h, z1]], "g-back", L.back);
+    [[[x0, 0, z1], [x1, 0, z1]], [[x0, 0, z1], [x0, h, z1]], [[x0, 0, z1], [x0, 0, 0]]].forEach(function (e) { line(e[0], e[1], "alu-back", L.back); });
+    clamp([x0, 0, z1], L.back, 10);
+
+    var g = frontGroup;
+    poly([[x0, h, 0], [x1, h, 0], [x1, h, z1], [x0, h, z1]], "g-top", g);
+    poly([[x0, 0, 0], [x1, 0, 0], [x1, h, 0], [x0, h, 0]], "g-front", g);
+    el("polygon", { points: pts([[x0, 0, 0], [x1, 0, 0], [x1, h, 0], [x0, h, 0]]), "class": "flash" }, g);
+    var edges = [
+      [[x1, 0, 0], [x1, 0, z1]], [[x1, 0, z1], [x1, h, z1]], [[x0, h, z1], [x1, h, z1]], [[x0, h, 0], [x0, h, z1]],
+      [[x1, h, 0], [x1, h, z1]],
+      [[x0, 0, 0], [x1, 0, 0]], [[x0, h, 0], [x1, h, 0]], [[x0, 0, 0], [x0, h, 0]], [[x1, 0, 0], [x1, h, 0]]
+    ];
+    edges.forEach(function (e) { line(e[0], e[1], "alu-o", g); });
+    edges.forEach(function (e) { line(e[0], e[1], "alu-i", g); });
+    [[x0, 0, 0], [x1, 0, 0], [x0, h, 0], [x1, h, 0], [x1, 0, z1], [x1, h, z1], [x0, h, z1]].forEach(function (c) { clamp(c, g); });
+  }
+
+  /* Raspberry Pi de cada estación: abajo, detrás de la cinta, con su bajada al tubo */
+  var routes = [], pis = [], leds = [];
+  function addPi(s, i) {
+    var px = s.cx + 8;
+    solid(px - 24, px + 24, 14, 30, SD - 30, SD - 8, "p", L.pis);
+    leds[i] = el("circle", Object.assign(xy(P(px + 16, 23, SD - 30)), { r: 3, "class": "led" }), L.pis);
+    s.port = [px, 14, SD - 19];
+    s.drop = [[px, 14, SD - 19], [px, TY, SD - 19], [px, TY, TZ]];
+    routes.push(s.drop);
+  }
+
+  var stG = [];
+  ST.forEach(function (s, i) {
+    var g = el("g", { "class": "station", tabindex: "0", role: "button", "aria-label": "Enviar un mensaje de ejemplo desde " + s.id }, L.front);
+    frame(s, SIDE_Y0, g);
+    addPi(s, i);
+    var lp = P(s.cx - 30, s.h, SD);
+    var t = el("text", { x: lp[0], y: lp[1] - 30, "class": "tag" }, L.labels); t.textContent = s.id;
+    var r = el("text", { x: lp[0], y: lp[1] - 12, "class": "role" }, L.labels); r.textContent = s.role;
+    g.addEventListener("click", function () { send(i); });
+    g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); send(i); } });
+    stG[i] = g;
+  });
+
+  /* E6: gabinete del motor de la cinta (también con Pi) */
+  (function () {
+    var g = el("g", { "class": "station", tabindex: "0", role: "button", "aria-label": "Enviar un mensaje de ejemplo desde E6" }, L.front);
+    frame(E6, SIDE_Y0, g);
+    solid(E6.x0 + 20, E6.x0 + 70, 34, 72, 30, 80, "d", L.back);  /* motor */
+    addPi(E6, 4);
+    var lp = P(E6.cx - 30, E6.h, SD);
+    var t = el("text", { x: lp[0], y: lp[1] - 30, "class": "tag" }, L.labels); t.textContent = "E6";
+    var r = el("text", { x: lp[0], y: lp[1] - 12, "class": "role" }, L.labels); r.textContent = "Cinta";
+    g.addEventListener("click", function () { send(4); });
+    g.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); send(4); } });
+    stG[4] = g;
+  })();
+
+  /* E5: gabinete con router, Raspberry Pi 5 y pantalla */
+  var e5g = el("g", {}, L.e5);
+  var RX0 = 905, RX1 = 965, PX0 = 985, PX1 = 1030;
+  /* adentro (se dibuja antes que el marco para verse a través del vidrio) */
+  var inner = el("g", {}, L.back);
+  solid(RX0, RX1, 10, 26, 30, 80, "d", inner);                       /* router */
+  [RX0 + 10, RX0 + 30, RX0 + 50].forEach(function (x) { line([x, 26, 78], [x, 52, 78], "antenna", inner); });
+  solid(PX0, PX1, 10, 24, 40, 76, "p", inner);                        /* Pi 5 */
+  var piLed = el("circle", Object.assign(xy(P(PX1 - 8, 17, 40)), { r: 3, "class": "led" }), inner);
+  el("path", { d: d3([[RX1, 18, 55], [PX0, 18, 55]]), "class": "patch" }, inner);
+  /* E5 sin marco: solo el soporte de la pantalla */
+  solid(E5.cx - 50, E5.cx + 50, 0, 4, 20, 70, "d", inner);
+  solid(E5.cx - 7, E5.cx + 7, 4, 130, 40, 50, "d", inner);
+  /* pantalla, al frente */
+  var a = P(E5.x0 + 18, 228, 2), b = P(E5.x1 - 18, 118, 2);
+  var SX = a[0], SY = a[1], SWD = b[0] - a[0], SHT = b[1] - a[1];
+  el("rect", { x: SX, y: SY, width: SWD, height: SHT, rx: 3, "class": "scr" }, L.e5);
+  var bezel = el("rect", { x: SX - 3, y: SY - 3, width: SWD + 6, height: SHT + 6, rx: 5, "class": "bezel" }, L.e5);
+  var hd = el("text", { x: SX + 9, y: SY + 15, "class": "st-head" }, L.e5); hd.textContent = "E5 · DATOS QUE LLEGAN";
+  var rowsOrder = [4, 0, 1, 2, 3];
+  var rows = [];
+  rowsOrder.forEach(function (i, k) {
+    var y = SY + 33 + k * 15.5;
+    var dot = el("circle", { cx: SX + 13, cy: y - 3.5, r: 3.5, "class": "sdot" }, L.e5);
+    var n = el("text", { x: SX + 22, y: y, "class": "st" }, L.e5); n.textContent = SEND[i].id;
+    var v = el("text", { x: SX + SWD - 9, y: y, "class": "st-dim", "text-anchor": "end" }, L.e5); v.textContent = "sin datos";
+    rows[i] = { dot: dot, v: v };
+  });
+  var e5p = P(E5.cx, 236, 2);
+  var t5 = el("text", { x: e5p[0], y: e5p[1] - 30, "class": "tag" }, L.labels); t5.textContent = "E5";
+  var r5 = el("text", { x: e5p[0], y: e5p[1] - 12, "class": "role" }, L.labels); r5.textContent = "Recibe y muestra";
+
+  /* Tubo troncal en el piso, bajo la cinta, que entra a E5 por abajo hasta el router */
+  var trunkStart = E6.port[0];
+  var tail = [[RX0 - 20, TY, TZ], [RX0, TY, TZ], [RX0 + 8, 14, TZ]];
+  routes.push([[trunkStart, TY, TZ], [RX0 - 20, TY, TZ], [RX0, TY, TZ]]);
+  var ds = routes.map(d3);
+  ["tube-edge", "tube-core", "tube-hi", "cable"].forEach(function (c) {
+    ds.forEach(function (d) {
+      var p = el("path", { d: d, "class": c }, L.tubes);
+      if (c === "tube-hi") p.setAttribute("transform", "translate(0,-3)");
+    });
+  });
+
+  /* Cinta transportadora: pasa por dentro de E1 a E4 */
+  var legX = [10, 180, 385, 590, 795];
+  legX.forEach(function (x) {
+    line([x, 0, 84], [x, BELT_Y - 12, 84], "leg", L.legsBack);
+    line([x, 0, 26], [x, BELT_Y - 12, 26], "leg", L.legsFront);
+  });
+  poly([[BELT_X0, BELT_Y, 20], [BELT_X1, BELT_Y, 20], [BELT_X1, BELT_Y, 90], [BELT_X0, BELT_Y, 90]], "b-top", L.belt);
+  var slats = [];
+  for (var k = 0; k < 34; k++) slats.push(el("path", { "class": "slat" }, L.belt));
+  poly([[BELT_X0, BELT_Y - 12, 20], [BELT_X1, BELT_Y - 12, 20], [BELT_X1, BELT_Y, 20], [BELT_X0, BELT_Y, 20]], "b-front", L.belt);
+  poly([[BELT_X1, BELT_Y - 12, 20], [BELT_X1, BELT_Y - 12, 90], [BELT_X1, BELT_Y, 90], [BELT_X1, BELT_Y, 20]], "b-front", L.belt);
+  var slatOff = 0;
+  function drawSlats() {
+    var span = BELT_X1 - BELT_X0, step = span / slats.length;
+    slats.forEach(function (sl, i) {
+      var x = BELT_X0 + ((i * step + slatOff) % span);
+      sl.setAttribute("d", d3([[x, BELT_Y, 22], [x, BELT_Y, 88]]));
+    });
+  }
+  drawSlats();
+
+  /* Rótulos con línea, debajo del piso */
+  function callout(p, tx, title, sub) {
+    var q = P(p[0], p[1], p[2]), ty = 404;
+    el("circle", { cx: q[0].toFixed(1), cy: q[1].toFixed(1), r: 3, "class": "callout-dot" }, L.labels);
+    el("path", { d: "M" + q[0].toFixed(1) + " " + q[1].toFixed(1) + "V" + (ty - 16) + "H" + tx, "class": "callout-line" }, L.labels);
+    var t = el("text", { x: tx, y: ty, "class": "callout" }, L.labels); t.textContent = title;
+    var s2 = el("text", { x: tx, y: ty + 16, "class": "callout-sub" }, L.labels); s2.textContent = sub;
+  }
+  callout([300, TY, TZ - 8], 300 + OX - 40, "Tubo bajo la cinta", "lleva todos los cables a E5");
+  callout([ST[0].port[0] - 24, 18, SD - 30], 150, "Raspberry Pi", "una en cada estación");
+  callout([ST[3].x1, 0, 0], 600 + OX + 40, "Abrazadera azul", "en cada esquina");
+  callout([RX0 + 30, 10, 30], 1190, "Router + Pi 5", "reciben todo en E5");
+
+  /* Ruta animada de cada mensaje: Pi → bajada → tubo → router → Pi 5 */
+  var toPi5 = [[RX0 + 30, 18, 55], [PX0 + 10, 18, 55]];
+  var meas = SEND.map(function (s) {
+    return el("path", { d: d3(s.drop.concat(tail, toPi5)), fill: "none", stroke: "none" }, svg);
+  });
+
+  /* Mensajes de ejemplo */
+  var lastEl = document.getElementById("last");
+  function tam(dm) { return dm < 92 ? "pequeño" : dm < 112 ? "mediano" : "grande"; }
+  function summary(i, grp, txt) {
+    if (i === 4) return txt || "cinta en marcha";
+    if (!grp) grp = { id: "G-0" + gid, fr: [{ d: 96 }, { d: 104 }, { d: 90 }], q: "alta" };
+    var n = grp.fr.length;
+    if (i === 0) return grp.id + " · " + n + " frutas recibidas";
+    if (i === 1) return grp.id + " · calidad " + grp.q;
+    if (i === 2) {
+      var avg = Math.round(grp.fr.reduce(function (s, f) { return s + f.d; }, 0) / n);
+      return grp.id + " · " + avg + " mm promedio (" + tam(avg) + ")";
+    }
+    var ex = grp.fr.filter(function (f) { return f.d >= 92; }).length;
+    return grp.id + " · " + ex + " exportación" + (n - ex ? ", " + (n - ex) + " nacional" : "");
+  }
+  function arrive(i, text) {
+    var r = rows[i];
+    r.v.textContent = i === 4 ? text : text.split(" · ")[1];
+    r.dot.classList.add("on"); setTimeout(function () { r.dot.classList.remove("on"); }, 800);
+    piLed.classList.add("on"); setTimeout(function () { piLed.classList.remove("on"); }, 300);
+    bezel.classList.remove("pulse"); void bezel.getBoundingClientRect(); bezel.classList.add("pulse");
+    lastEl.innerHTML = "Último mensaje: <b></b> → <span></span>";
+    lastEl.children[0].textContent = SEND[i].id + " " + text;
+    lastEl.children[1].textContent = i === 4 ? "/api/v1/ingest/e6" : SEND[i].route;
+  }
+  var SPEED = 430;
+  var reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function send(i, grp, txt) {
+    var text = summary(i, grp, txt);
+    if (i === 4 || !running) { stG[i].classList.add("on"); setTimeout(function () { stG[i].classList.remove("on"); }, 450); }
+    if (i === 4) { leds[i].classList.add("on"); setTimeout(function () { leds[i].classList.remove("on"); }, 450); }
+    if (reduce) { arrive(i, text); return; }
+    var m = meas[i], len = m.getTotalLength();
+    var halo = el("circle", { r: 11, "class": "halo" }, L.packets);
+    var dot = el("circle", { r: 5.5, "class": "packet" }, L.packets);
+    var t0 = performance.now();
+    (function step(t) {
+      var dd = (t - t0) / 1000 * SPEED;
+      if (dd >= len) { L.packets.removeChild(halo); L.packets.removeChild(dot); arrive(i, text); return; }
+      var q = m.getPointAtLength(dd);
+      halo.setAttribute("cx", q.x); halo.setAttribute("cy", q.y);
+      dot.setAttribute("cx", q.x); dot.setAttribute("cy", q.y);
+      requestAnimationFrame(step);
+    })(t0);
+  }
+
+  /* Simulación por etapas: un grupo de 3 frutas parte en E1; la cinta se detiene en cada estación,
+     la estación trabaja, envía su resultado a E5 y recién entonces la cinta avanza a la siguiente. */
+  var nowEl = document.getElementById("now");
+  var gid = 146, grp = null, BELT_V = 120, WORK = 2.6;
+  var stateTx = ST.map(function (s) {
+    var q = P(s.cx, s.h - 26, 0);
+    var t = el("text", { x: q[0].toFixed(1), y: q[1].toFixed(1), "class": "state" }, L.labels);
+    t.textContent = "esperando";
+    return t;
+  });
+  function setState(i, txt, cls) { stateTx[i].textContent = txt; stateTx[i].setAttribute("class", "state" + (cls ? " " + cls : "")); }
+  function makeGroup() {
+    gid += 1;
+    var fr = [];
+    for (var j = 0; j < 3; j++) fr.push({ d: 86 + Math.floor(Math.random() * 32) });
+    return { id: "G-0" + gid, fr: fr, q: Math.random() > .25 ? "alta" : "media" };
+  }
+  function newGroup() {
+    if (grp) grp.els.forEach(function (c) { L.fruit.removeChild(c); });
+    grp = makeGroup();
+    grp.x = ST[0].cx + 25;
+    grp.els = grp.fr.map(function () { return el("circle", { r: 10, fill: "url(#frO)" }, L.fruit); });
+    ST.forEach(function (s, i) { setState(i, "esperando"); });
+    placeGroup();
+  }
+  function placeGroup() {
+    grp.els.forEach(function (c, j) {
+      var x = grp.x - j * 25, z = 44 + (j % 2) * 20;
+      var q = P(x, BELT_Y + 10, z);
+      c.setAttribute("cx", q[0].toFixed(1)); c.setAttribute("cy", q[1].toFixed(1));
+      c.setAttribute("opacity", x > BELT_X1 - 4 ? 0 : 1);
+    });
+  }
+  /* fases: work(i) → move(i+1) → ... → work(3) → exit */
+  var phase = "work", at = 0, timer = 0;
+  function say(t) { nowEl.textContent = t; }
+  function startWork(i) {
+    phase = "work"; at = i; timer = 0;
+    setState(i, "trabajando…", "busy");
+    stG[i].classList.add("on");
+    leds[i].classList.add("on");
+    say("Cinta detenida. " + ST[i].id + " trabajando con " + grp.id + ".");
+  }
+  function finishWork(i) {
+    setState(i, "listo ✓", "done");
+    stG[i].classList.remove("on");
+    leds[i].classList.remove("on");
+    send(i, grp);
+    if (i < ST.length - 1) { phase = "move"; at = i + 1; say(ST[i].id + " listo y envió su dato a E5. La cinta avanza a " + ST[i + 1].id + "."); }
+    else { phase = "exit"; say("E4 listo. " + grp.id + " sale de la cinta y entra el siguiente grupo a E1."); }
+    send(4, null, "cinta avanzando");
+  }
+  var running = false, last = 0;
+  function tick(t) {
+    if (!running) return;
+    var dt = Math.min(0.05, (t - last) / 1000); last = t;
+    if (phase === "work") {
+      timer += dt;
+      if (timer >= WORK) finishWork(at);
+    } else {
+      slatOff = (slatOff + BELT_V * dt) % (BELT_X1 - BELT_X0); drawSlats();
+      grp.x += BELT_V * dt;
+      if (phase === "move" && grp.x >= ST[at].cx + 25) {
+        grp.x = ST[at].cx + 25; send(4, null, "cinta detenida"); startWork(at);
+      } else if (phase === "exit" && grp.x - 75 > BELT_X1) {
+        newGroup(); startWork(0);
+      }
+      placeGroup();
+    }
+    requestAnimationFrame(tick);
+  }
+  var btn = document.getElementById("btnRun");
+  function setRun(on) {
+    if (on === running) return;
+    running = on;
+    btn.textContent = on ? "Pausar cinta" : "Mover cinta";
+    if (on) { last = performance.now(); requestAnimationFrame(tick); }
+    else { say("Simulación en pausa."); }
+  }
+  btn.addEventListener("click", function () { setRun(!running); });
+  document.getElementById("optCable").addEventListener("change", function (e) { svg.classList.toggle("show-cable", e.target.checked); });
+
+  /* Estado inicial: el primer grupo de 3 frutas ya está en E1 */
+  newGroup(); startWork(0);
+  if (!reduce) { running = true; last = performance.now(); requestAnimationFrame(tick); }
+  else { btn.textContent = "Mover cinta"; say("Simulación en pausa. Pulsa Mover cinta para empezar."); }
+})();
+</script>
+
+</body>
+</html>
