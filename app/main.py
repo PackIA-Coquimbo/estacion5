@@ -291,6 +291,40 @@ def _evaluar_y_registrar_alertas(
     _registrar_alertas_sin_senal(session)
 
 
+def _cerrar_grupo_si_completo(session: Session, id_grupo: str | None) -> None:
+    """Cierra el grupo cuando llegó E1 y E4 clasificó todas sus frutas.
+
+    Se revisa con cualquier lectura del grupo, porque los mensajes pueden llegar
+    en desorden. La salida se guarda solo la primera vez; el estado se recalcula
+    si después llega una alerta nueva del grupo.
+    """
+    if id_grupo is None:
+        return
+    grupo = session.get(Grupo, id_grupo)
+    if grupo is None or grupo.frutas_detectadas is None:
+        return
+
+    session.flush()  # las alertas recién agregadas deben verse en la consulta
+    categorias = session.scalars(
+        select(Fruta.e4_categoria_final).where(
+            Fruta.id_grupo == id_grupo, Fruta.e4_categoria_final.is_not(None)
+        )
+    ).all()
+    if len(categorias) < grupo.frutas_detectadas:
+        return
+
+    if "rechazo" in categorias:
+        grupo.estado = "rechazo"
+    elif session.scalar(
+        select(Alerta.id).where(Alerta.id_grupo == id_grupo).limit(1)
+    ) is not None:
+        grupo.estado = "anomalia"
+    else:
+        grupo.estado = "ok"
+    if grupo.salida is None:
+        grupo.salida = datetime.now(timezone.utc)
+
+
 def _guardar_lectura(session: Session, payload: Any) -> dict:
     datos = payload.model_dump(mode="json")
     json_canonico = json.dumps(
@@ -360,6 +394,7 @@ def _guardar_lectura(session: Session, payload: Any) -> dict:
     try:
         session.flush()
         _evaluar_y_registrar_alertas(session, payload, payload_hash)
+        _cerrar_grupo_si_completo(session, id_grupo)
         session.commit()
     except SQLAlchemyError:
         session.rollback()
@@ -515,7 +550,10 @@ def obtener_metricas(
         Grupo, Fruta.id_grupo == Grupo.id_grupo
     )
     lecturas_query = select(Lectura).where(Lectura.estacion == "E4")
-    alertas_query = select(Alerta.estacion, func.count(Alerta.id))
+    alertas_query = (
+        select(Alerta.estacion, func.count(Alerta.id))
+        .where(Alerta.resuelta.is_(False))
+    )
     if lote is not None:
         frutas_query = frutas_query.where(Grupo.id_lote == lote)
         lecturas_query = lecturas_query.where(Lectura.id_lote == lote)
@@ -667,20 +705,32 @@ def obtener_estado_estaciones(session: Session = Depends(get_db)):
             if lectura is not None
             else None
         )
-        estado.append(
-            {
-                "estacion": estacion,
-                "estado": (
-                    "online"
-                    if segundos is not None and segundos <= SEGUNDOS_SIN_SENAL
-                    else "sin_senal"
-                ),
-                "ultima_lectura": (
-                    lectura.ts_recepcion if lectura is not None else None
-                ),
-                "segundos_desde_lectura": segundos,
-            }
-        )
+        entrada = {
+            "estacion": estacion,
+            "estado": (
+                "online"
+                if segundos is not None and segundos <= SEGUNDOS_SIN_SENAL
+                else "sin_senal"
+            ),
+            "ultima_lectura": (
+                lectura.ts_recepcion if lectura is not None else None
+            ),
+            "segundos_desde_lectura": segundos,
+        }
+        if estacion == "E6":
+            evento_cinta = session.scalar(
+                select(EventoCinta)
+                .join(Lectura, EventoCinta.lectura_id == Lectura.id)
+                .order_by(Lectura.ts_recepcion.desc(), EventoCinta.id.desc())
+                .limit(1)
+            )
+            entrada["estado_cinta"] = (
+                evento_cinta.estado_cinta if evento_cinta is not None else None
+            )
+            entrada["falla_mecanica_detectada"] = (
+                evento_cinta.falla_mecanica if evento_cinta is not None else None
+            )
+        estado.append(entrada)
     return estado
 
 
