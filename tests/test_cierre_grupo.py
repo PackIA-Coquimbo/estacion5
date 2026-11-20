@@ -143,3 +143,19 @@ def test_estado_cinta_solo_en_la_entrada_de_e6(client, contratos):
             assert "falla_mecanica_detectada" not in entrada
 
 
+def test_metricas_solo_cuenta_alertas_activas(client, contratos):
+    enviar(client, contratos["E1"])
+    enviar(client, contratos["E4"])
+
+    metricas = client.get("/api/v1/metricas").json()
+    assert metricas["anomalias_por_estacion"]["E4"] >= 1
+
+    alertas = client.get("/api/v1/alertas?activas=true").json()
+    alerta_e4 = next(a for a in alertas if a["estacion"] == "E4")
+    respuesta = client.patch(f"/api/v1/alertas/{alerta_e4['id']}")
+    assert respuesta.status_code == 200
+
+    metricas = client.get("/api/v1/metricas").json()
+    assert metricas["anomalias_por_estacion"]["E4"] == 0
+
+

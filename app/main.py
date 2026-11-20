@@ -550,7 +550,10 @@ def obtener_metricas(
         Grupo, Fruta.id_grupo == Grupo.id_grupo
     )
     lecturas_query = select(Lectura).where(Lectura.estacion == "E4")
-    alertas_query = select(Alerta.estacion, func.count(Alerta.id))
+    alertas_query = (
+        select(Alerta.estacion, func.count(Alerta.id))
+        .where(Alerta.resuelta.is_(False))
+    )
     if lote is not None:
         frutas_query = frutas_query.where(Grupo.id_lote == lote)
         lecturas_query = lecturas_query.where(Lectura.id_lote == lote)
