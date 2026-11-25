@@ -1,12 +1,11 @@
 {
   "id_lote": "LOTE-2026-11-A",
-  "id_grupo": "G-0001",
+  "id_fruta": "M-0001",
   "estacion": "E1",
-  "timestamp": "2026-11-18T10:15:30Z",
+  "timestamp": "2026-11-25T10:15:30Z",
   "datos": {
     "validez_imagen": true,
     "estado_captura": "aceptada",
-    "posicion_correcta": true,
-    "frutas_detectadas": 3
+    "posicion_correcta": true
   }
 }

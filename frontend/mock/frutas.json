@@ -1,0 +1,82 @@
+{
+  "id_lote": "LOTE-2026-11-A",
+  "total_frutas": 146,
+  "frutas": [
+    {
+      "id_fruta": "M-0146",
+      "estado": "ok",
+      "ingreso": "2026-11-25T10:16:30Z",
+      "salida": "2026-11-25T10:16:50Z",
+      "calidad_visual": "alta",
+      "confianza_visual": 0.93,
+      "defectos_detectados": [],
+      "diametro_mm": 66,
+      "tamano": "mediano",
+      "categoria_final": "exportacion",
+      "probabilidad": 0.9,
+      "alertas": 0
+    },
+    {
+      "id_fruta": "M-0145",
+      "estado": "rechazo",
+      "ingreso": "2026-11-25T10:16:11Z",
+      "salida": "2026-11-25T10:16:30Z",
+      "calidad_visual": "defectos_visibles",
+      "confianza_visual": 0.84,
+      "defectos_detectados": [
+        "golpe"
+      ],
+      "diametro_mm": 63,
+      "tamano": "mediano",
+      "categoria_final": "rechazo",
+      "probabilidad": 0.88,
+      "alertas": 2
+    },
+    {
+      "id_fruta": "M-0144",
+      "estado": "anomalia",
+      "ingreso": "2026-11-25T10:15:52Z",
+      "salida": "2026-11-25T10:16:11Z",
+      "calidad_visual": "media",
+      "confianza_visual": 0.66,
+      "defectos_detectados": [
+        "color_irregular"
+      ],
+      "diametro_mm": 58,
+      "tamano": "pequeno",
+      "categoria_final": "mercado_nacional",
+      "probabilidad": 0.8,
+      "alertas": 1
+    },
+    {
+      "id_fruta": "M-0143",
+      "estado": "ok",
+      "ingreso": "2026-11-25T10:15:33Z",
+      "salida": "2026-11-25T10:15:52Z",
+      "calidad_visual": "alta",
+      "confianza_visual": 0.9,
+      "defectos_detectados": [],
+      "diametro_mm": 72,
+      "tamano": "grande",
+      "categoria_final": "exportacion",
+      "probabilidad": 0.91,
+      "alertas": 0
+    },
+    {
+      "id_fruta": "M-0142",
+      "estado": "ok",
+      "ingreso": "2026-11-25T10:15:14Z",
+      "salida": "2026-11-25T10:15:33Z",
+      "calidad_visual": "media",
+      "confianza_visual": 0.86,
+      "defectos_detectados": [
+        "mancha_leve"
+      ],
+      "diametro_mm": 61,
+      "tamano": "mediano",
+      "categoria_final": "mercado_nacional",
+      "probabilidad": 0.85,
+      "alertas": 0
+    }
+  ]
+}

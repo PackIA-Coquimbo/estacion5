@@ -15,6 +15,21 @@
 | Dashboard (C, Christian) | Pantalla terminada con datos simulados y servida por la API en `/` (PR #11 y #12). **Falta conectarla a la API**: las respuestas no tienen la forma que espera `api.js` (sección 4). |
 | Red de la línea | Fase 1 (router) lista. Fase 2 (Pi) **sin empezar**. Ver `docs/avance/registro-conexiones.md`. |
 
+## 1b. Cambio a una mandarina por pasada (contratos v3) — 25 de noviembre
+
+**Nuevo requerimiento:** la cinta lleva **una sola mandarina a la vez**. Se eliminó el grupo de frutas: los contratos pasaron a **v3** (`docs/formato_datos/`), con un mensaje por mandarina y por estación, `id_fruta` en vez de `id_grupo` y los resultados dentro de `datos`. El dashboard ya se adaptó (rama `feat/c-una-mandarina`). **Backend, simulador y tests siguen en v2**, así que la API responde 422 a los mensajes v3 y los tests que leen los JSON de ejemplo fallan hasta migrarlos.
+
+**Gabriel (A):**
+- [ ] `app/schemas.py`: `E1Payload`…`E4Payload` con `id_fruta` y `datos` (sin `id_grupo` ni `frutas[]`). E1 sin `frutas_detectadas`. E6 con `id_fruta_en_cinta`.
+- [ ] `app/models.py`: unir `Grupo` y `Fruta` en una sola tabla `fruta` (clave `id_fruta`, con `id_lote`, campos de E1, estado, ingreso y salida). `Lectura` y `Alerta` con `id_fruta` en vez de `id_grupo`. Actualizar `app/script.sql`.
+- [ ] `app/main.py`: cierre por mandarina al llegar E4; `GET /api/v1/lotes/{id}/frutas` y `GET /api/v1/frutas/{id}` en vez de las rutas de grupos; `/metricas` en mandarinas (del turno y de la última hora); estado de E6 con `id_fruta_en_cinta`.
+- [ ] `app/reglas.py`: quitar la regla de "tamaños irregulares en el grupo" (15 mm). El mínimo de tamaño pasa a mandarina (sugerido: alerta bajo 55 mm).
+
+**Maicol (B):**
+- [ ] `tools/simulador.py`: una mandarina por pasada (`M-0001`, …), mensajes v3, diámetros de 50 a 80 mm y `--rangos 60,70` por defecto.
+- [ ] `tests/`: migrar `test_contratos.py` (formato v3, ejemplo 64 mm → mediano) y los tests que usan grupos (`test_ingesta.py`, `test_persistencia.py`, `test_consultas.py`, `test_cierre_grupo.py`, `test_reglas.py`, `conftest.py`).
+- [ ] Enviar el formato v3 a E1–E4 y E6 (mensaje listo en `docs/formato_datos/README.md`) y confirmar con E3 los rangos de 60 y 70 mm.
+
 ## 2. Gabriel (A) — Backend
 
 Encontrado al levantar la API con Python 3.11 y alimentarla con `tools/simulador.py` (8 grupos, todos los mensajes respondieron `201`).
@@ -73,6 +88,6 @@ Detalle en `docs/avance/registro-conexiones.md` y pasos en `docs/plan/plan-conex
 
 | Decisión | Quién |
 |---|---|
-| Rangos de tamaño de E3 (pequeño, mediano, grande). Hoy hay tres versiones distintas: dashboard 92/112 mm, simulador 35/45 mm, contrato "40 mm = mediano". Además, el backend usa 15 mm como diferencia máxima de diámetro dentro de un grupo. | Maicol con E3 |
+| Rangos de tamaño de E3 para mandarina. Propuesta v3 (contrato y dashboard): bajo 60 mm pequeño, 60–70 mediano, sobre 70 grande. Falta que E3 los confirme y que el simulador los adopte (hoy 35/45 mm). | Maicol con E3 |
 | ¿El dashboard se adapta a la API tal como está, o la API cambia a la forma de `frontend/mock/`? Propuesta: el dashboard adapta los nombres en `api.js` y la API agrega solo los datos que faltan (sección 2). | Gabriel y Christian |
 | Orientación del monitor en la demo (vertical u horizontal). | Todos |

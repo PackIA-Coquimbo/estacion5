@@ -1,19 +1,17 @@
 {
   "id_lote": "LOTE-2026-11-A",
-  "desde": "2026-11-18T09:18:00Z",
-  "hasta": "2026-11-18T10:17:00Z",
-  "grupos_turno": 146,
-  "frutas_turno": 584,
-  "frutas_ultima_hora": 498,
-  "grupos_ultima_hora": 124,
-  "rechazadas": 32,
-  "porcentaje_rechazo": 5.5,
-  "alertas_ultima_hora": 18,
+  "desde": "2026-11-25T09:18:00Z",
+  "hasta": "2026-11-25T10:17:00Z",
+  "frutas_turno": 146,
+  "frutas_ultima_hora": 146,
+  "rechazadas": 7,
+  "porcentaje_rechazo": 4.8,
+  "alertas_ultima_hora": 21,
   "por_categoria": {
-    "exportacion": 297,
-    "mercado_nacional": 131,
-    "proceso": 85,
-    "rechazo": 32,
-    "revision_manual": 39
+    "exportacion": 74,
+    "mercado_nacional": 37,
+    "proceso": 18,
+    "rechazo": 7,
+    "revision_manual": 10
   }
 }

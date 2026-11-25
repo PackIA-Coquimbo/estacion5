@@ -1,0 +1,31 @@
+{
+  "id_lote": "LOTE-2026-11-A",
+  "id_fruta": "M-0146",
+  "estado": "ok",
+  "ingreso": "2026-11-25T10:16:30Z",
+  "salida": "2026-11-25T10:16:50Z",
+  "e1": {
+    "timestamp": "2026-11-25T10:16:33Z",
+    "validez_imagen": true,
+    "estado_captura": "aceptada",
+    "posicion_correcta": true
+  },
+  "e2": {
+    "timestamp": "2026-11-25T10:16:38Z",
+    "calidad_visual": "alta",
+    "confianza_visual": 0.93,
+    "defectos_detectados": []
+  },
+  "e3": {
+    "timestamp": "2026-11-25T10:16:43Z",
+    "diametro_mm": 66,
+    "tamano": "mediano"
+  },
+  "e4": {
+    "timestamp": "2026-11-25T10:16:47Z",
+    "categoria_final": "exportacion",
+    "probabilidad": 0.9,
+    "requiere_revision_manual": false
+  },
+  "alertas": []
+}
