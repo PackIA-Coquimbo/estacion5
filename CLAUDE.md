@@ -22,8 +22,8 @@ Leer lo que corresponda a la tarea:
 | `docs/plan/plan-conexiones.md` | Plan de la red de la línea: router, IP fijas, Pi con la API y conexión de cada estación |
 | `docs/plan/conexion-estaciones.md` | Cómo se comunican las estaciones con E5 y por qué medio (maqueta en `conexion-estaciones.html`) |
 | `docs/trelo/semana2.md` | Bitácora de la semana 2 |
-| `docs/formato_datos/*.json` | Contratos de datos v2 por estación |
-| `docs/formato_datos/README.md` | Guía de los contratos v2, preguntas abiertas con otras estaciones y respuestas por defecto |
+| `docs/formato_datos/*.json` | Contratos de datos v3 por estación (una mandarina por mensaje) |
+| `docs/formato_datos/README.md` | Guía de los contratos v3, preguntas abiertas con otras estaciones y respuestas por defecto |
 | `docs/integracion/feat-b-integracion.md` | Rama de integración: tests, simulador y Docker para desarrollo y Pi |
 | `docs/avance/registro-dashboard.md` | Registro de avance del dashboard (rol C) y decisiones abiertas del frontend |
 | `docs/avance/registro-conexiones.md` | Registro de la jornada de conexiones: qué se hizo en cada fase de la red y configuración real |
@@ -44,8 +44,8 @@ El usuario de esta sesión es normalmente **Christian (rol C)**; confirmar si no
 ## Decisiones confirmadas
 
 - Transporte con **cinta transportadora** (no carrito); E6 informa `estado_cinta`.
-- Seguimiento por **grupo de frutas**; E2, E3 y E4 informan **por fruta** (`id_grupo`, `id_fruta`).
-- **E3** informa `diametro_mm` y `tamano` (`pequeno | mediano | grande`), por ejemplo 40 mm → mediano. E5 guarda lo que llega y no recalcula el tamaño.
+- La cinta lleva **una mandarina a la vez** (desde el 25 de noviembre; antes eran grupos de frutas). Cada estación informa por mandarina con `id_fruta`; ya no existe `id_grupo`.
+- **E3** informa `diametro_mm` y `tamano` (`pequeno | mediano | grande`), con rangos de mandarina propuestos (bajo 60 mm pequeño, 60–70 mediano, sobre 70 grande; por confirmar con E3). E5 guarda lo que llega y no recalcula el tamaño.
 - Equipo de E5: **Raspberry Pi 5** (ARM64, OS de 64 bits) con monitor en modo kiosko.
 - Base de datos: **SQLite en modo WAL** (PostgreSQL solo como opción vía `DATABASE_URL`).
 - Frontend sin framework (HTML/CSS/JS), servido por la misma API; *polling* y luego SSE si hay tiempo.
@@ -60,8 +60,8 @@ Planificado (aún no está en `requirements.txt`): SQLAlchemy 2.0 con SQLite.
 ## Estado del código (verificar antes de asumir)
 
 - `app/main.py`: endpoints `POST /api/v1/ingest/e1|e2|e3|e4|e6` que validan pero **no guardan**.
-- `docs/formato_datos/`: ya en **v2** (por grupo y por fruta).
-- `app/schemas.py`: todavía en **v1** (por caja); falta migrarlo a v2, por eso la API responde 422 a los mensajes v2.
+- `docs/formato_datos/`: en **v3** (una mandarina por mensaje, sin `id_grupo`).
+- `app/schemas.py`, la BD, `tools/simulador.py` y `tests/`: todavía en **v2** (por grupo); falta migrarlos a v3 (ver `docs/avance/pendientes.md`). Mientras tanto la API responde 422 a los mensajes v3.
 - `app/script.sql`: esquema v1, no coincide con los schemas.
 - `tests/`: `test_contratos.py` valida los JSON v2 y el simulador; `test_ingesta.py` se salta solo mientras `schemas.py` siga en v1 (hoy: 27 pasan, 46 se saltan).
 - `tools/simulador.py`: imita a E1–E4 y E6 enviando mensajes v2 a la API.
