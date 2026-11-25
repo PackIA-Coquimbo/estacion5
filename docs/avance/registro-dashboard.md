@@ -1,7 +1,7 @@
 # Registro de avance — Dashboard (Rol C)
 
 **Responsable:** Christian · **Área:** `frontend/` · **Rama actual:** `feat/c-dashboard-prototipo2` (antes `feat/c-prototipo-v2-contratos`)
-**Última actualización:** 2026-11-18
+**Última actualización:** 2026-11-25
 
 > **Para qué sirve este documento:** dejar por escrito qué se hizo en el dashboard, por qué, para qué sirve y qué falta, de modo que Gabriel (backend) y Maicol (integración) puedan entender el estado sin preguntar, y que cualquiera retome el trabajo con contexto. Se actualiza agregando entradas nuevas al final de la sección 4.
 
@@ -171,6 +171,17 @@ El HTML bajó de 31 KB a 23 KB. Para comprobar que la limpieza del CSS no cambi�
 - Los puntos de entrada y salida se calculan con el ancho del grupo, para que quede completamente fuera de la cinta en vez de medio asomado.
 
 **Desvanecimiento al terminar el recorrido:** al dejar E4, el grupo se desvanece mientras avanza hasta el final de la cinta (opacidad de 1 a 0 en cerca de medio segundo) y ya es invisible cuando cruza el borde. Durante el registro la cinta queda vacía, y el grupo siguiente entra desde fuera por la izquierda. Si la cinta falla a mitad de la salida, el grupo queda quieto con la opacidad que tenía y continúa al reanudar. El cambio de opacidad lo hace la GPU, igual que el movimiento.
+
+### 4.7 Una mandarina por pasada (contratos v3)
+
+**Requerimiento nuevo (25 de noviembre):** la cinta lleva **una sola mandarina a la vez**. Se eliminó el grupo de frutas en los contratos (v3, `docs/formato_datos/`) y el dashboard se adaptó:
+
+- `sim.js`: simula una mandarina por pasada (`M-0001`, …) con los campos v3. Diámetros de 48 a 84 mm (media 65) y cortes propuestos para mandarina: bajo 60 mm pequeño, 60–70 mediano, sobre 70 grande. Alerta bajo 55 mm. Se quitó la regla de "tamaños irregulares en el grupo". Defectos de cítrico: `mancha_leve`, `color_irregular`, `golpe`, `podredumbre`, `piel_danada`.
+- `app.js`: la cinta lleva una mandarina; las tarjetas E2–E4 muestran la lectura de la última mandarina (no una lista); "Mandarina en curso" con su ID, diámetro y veredicto; historial "Últimas mandarinas" con salida, diámetro, categoría y estado; indicadores en mandarinas (por hora, rechazadas, categoría final).
+- `index.html`: textos, encabezados de la tabla, ícono de mandarina y estilos sin uso eliminados (`.frl`, `.dots`, `.sumline`).
+- `api.js` y `mock/`: rutas propuestas `GET /api/v1/lotes/{id}/frutas` y `GET /api/v1/frutas/{id}`; `mock/grupos.json` y `mock/grupo.json` pasan a `frutas.json` y `fruta.json`; alertas y estaciones con `id_fruta`.
+
+**Verificado:** la página carga sin errores de JavaScript en Chrome sin interfaz, en horizontal (1920 × 1080) y vertical (1080 × 1920). **No verificado:** en la Raspberry Pi ni con la API real (el backend sigue en v2; ver `docs/avance/pendientes.md`, sección 1b).
 
 ## 5. Qué se verificó y qué no
 
