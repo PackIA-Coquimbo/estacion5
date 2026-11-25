@@ -11,17 +11,17 @@
  *                     Hay que abrir la página desde un servidor, no con doble clic.
  *   ?sim=1            El dashboard usa sus datos simulados internos y no llama a la API (plan B de la demo).
  *
- * Forma de las respuestas (propuesta para el backend; los ejemplos están en frontend/mock/):
- *   getGrupos     -> { id_lote, total_grupos, total_frutas, grupos:[{ id_grupo, estado, frutas_detectadas, ingreso, salida,
- *                      diametro_medio_mm, uniformidad, frutas:[{ id_fruta, categoria_final, tamano, diametro_mm, alertas }] }] }
- *   getMetricas   -> { id_lote, desde, hasta, grupos_turno, frutas_turno, frutas_ultima_hora, grupos_ultima_hora,
- *                      rechazadas, porcentaje_rechazo, alertas_ultima_hora, por_categoria:{ <categoria>: n } }
- *   getAlertas    -> { alertas:[{ id, severidad, estacion, mensaje, id_grupo, id_fruta, creada_en, resuelta }] }
- *   getEstaciones -> { id_lote, ahora, estaciones:[{ estacion, estado, ultima_lectura, id_grupo, severidad_ultima,
+ * Forma de las respuestas (propuesta para el backend, contratos v3: una mandarina por pasada; ejemplos en frontend/mock/):
+ *   getFrutas     -> { id_lote, total_frutas, frutas:[{ id_fruta, estado, ingreso, salida, calidad_visual, confianza_visual,
+ *                      defectos_detectados, diametro_mm, tamano, categoria_final, probabilidad, alertas }] }
+ *   getMetricas   -> { id_lote, desde, hasta, frutas_turno, frutas_ultima_hora, rechazadas, porcentaje_rechazo,
+ *                      alertas_ultima_hora, por_categoria:{ <categoria>: n } }
+ *   getAlertas    -> { alertas:[{ id, severidad, estacion, mensaje, id_fruta, creada_en, resuelta }] }
+ *   getEstaciones -> { id_lote, ahora, estaciones:[{ estacion, estado, ultima_lectura, id_fruta, severidad_ultima,
  *                      (solo E6) estado_cinta, falla_mecanica_detectada }] }
- *   getGrupo      -> { id_lote, id_grupo, estado, ingreso, salida, e1:{...}, frutas:[{ id_fruta, e2:{...}, e3:{...}, e4:{...}, alertas }], alertas }
+ *   getFruta      -> { id_lote, id_fruta, estado, ingreso, salida, e1:{...}, e2:{...}, e3:{...}, e4:{...}, alertas }
  *
- * Valores cerrados: estado de grupo = ok | anomalia | rechazo | proceso; severidad = info | alerta | falla;
+ * Valores cerrados: estado de mandarina = ok | anomalia | rechazo | proceso; severidad = info | alerta | falla;
  * estado de estación = ok | sin_senal | falla; tamano = pequeno | mediano | grande.
  * Las fechas son ISO 8601 con zona (UTC), tal como las envían las estaciones.
  */
@@ -69,10 +69,10 @@
     sim: mode === "sim",
     base: base,
 
-    /* Últimos grupos de un lote, del más reciente al más antiguo. */
-    getGrupos: function (opts) {
+    /* Últimas mandarinas de un lote, de la más reciente a la más antigua. */
+    getFrutas: function (opts) {
       opts = opts || {};
-      return request("grupos", "/api/v1/lotes/" + enc(opts.lote || "") + "/grupos", { limit: opts.limit || 20 });
+      return request("frutas", "/api/v1/lotes/" + enc(opts.lote || "") + "/frutas", { limit: opts.limit || 20 });
     },
     /* Indicadores del turno. */
     getMetricas: function (lote) {
@@ -87,9 +87,9 @@
     getEstaciones: function () {
       return request("estaciones", "/api/v1/estaciones/estado");
     },
-    /* Trazabilidad completa de un grupo. */
-    getGrupo: function (idGrupo) {
-      return request("grupo", "/api/v1/grupos/" + enc(idGrupo));
+    /* Trazabilidad completa de una mandarina. */
+    getFruta: function (idFruta) {
+      return request("fruta", "/api/v1/frutas/" + enc(idFruta));
     }
   };
 })();

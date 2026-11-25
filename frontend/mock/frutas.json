@@ -1,80 +1,82 @@
 {
   "id_lote": "LOTE-2026-11-A",
-  "total_grupos": 146,
-  "total_frutas": 584,
-  "grupos": [
+  "total_frutas": 146,
+  "frutas": [
     {
-      "id_grupo": "G-0146",
+      "id_fruta": "M-0146",
       "estado": "ok",
-      "frutas_detectadas": 4,
-      "ingreso": "2026-11-18T10:16:30Z",
-      "salida": "2026-11-18T10:16:50Z",
-      "diametro_medio_mm": 102,
-      "uniformidad": "uniforme",
-      "frutas": [
-        { "id_fruta": "F1", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 104, "alertas": 0 },
-        { "id_fruta": "F2", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 98, "alertas": 0 },
-        { "id_fruta": "F3", "categoria_final": "exportacion", "tamano": "grande", "diametro_mm": 115, "alertas": 0 },
-        { "id_fruta": "F4", "categoria_final": "mercado_nacional", "tamano": "pequeno", "diametro_mm": 91, "alertas": 0 }
-      ]
+      "ingreso": "2026-11-25T10:16:30Z",
+      "salida": "2026-11-25T10:16:50Z",
+      "calidad_visual": "alta",
+      "confianza_visual": 0.93,
+      "defectos_detectados": [],
+      "diametro_mm": 66,
+      "tamano": "mediano",
+      "categoria_final": "exportacion",
+      "probabilidad": 0.9,
+      "alertas": 0
     },
     {
-      "id_grupo": "G-0145",
+      "id_fruta": "M-0145",
       "estado": "rechazo",
-      "frutas_detectadas": 3,
-      "ingreso": "2026-11-18T10:16:06Z",
-      "salida": "2026-11-18T10:16:26Z",
-      "diametro_medio_mm": 99,
-      "uniformidad": "uniforme",
-      "frutas": [
-        { "id_fruta": "F1", "categoria_final": "rechazo", "tamano": "mediano", "diametro_mm": 97, "alertas": 2 },
-        { "id_fruta": "F2", "categoria_final": "proceso", "tamano": "mediano", "diametro_mm": 100, "alertas": 1 },
-        { "id_fruta": "F3", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 100, "alertas": 0 }
-      ]
+      "ingreso": "2026-11-25T10:16:11Z",
+      "salida": "2026-11-25T10:16:30Z",
+      "calidad_visual": "defectos_visibles",
+      "confianza_visual": 0.84,
+      "defectos_detectados": [
+        "golpe"
+      ],
+      "diametro_mm": 63,
+      "tamano": "mediano",
+      "categoria_final": "rechazo",
+      "probabilidad": 0.88,
+      "alertas": 2
     },
     {
-      "id_grupo": "G-0144",
+      "id_fruta": "M-0144",
       "estado": "anomalia",
-      "frutas_detectadas": 4,
-      "ingreso": "2026-11-18T10:15:41Z",
-      "salida": "2026-11-18T10:16:01Z",
-      "diametro_medio_mm": 104,
-      "uniformidad": "irregular",
-      "frutas": [
-        { "id_fruta": "F1", "categoria_final": "exportacion", "tamano": "grande", "diametro_mm": 121, "alertas": 0 },
-        { "id_fruta": "F2", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 104, "alertas": 0 },
-        { "id_fruta": "F3", "categoria_final": "revision_manual", "tamano": "mediano", "diametro_mm": 99, "alertas": 1 },
-        { "id_fruta": "F4", "categoria_final": "mercado_nacional", "tamano": "pequeno", "diametro_mm": 90, "alertas": 0 }
-      ]
+      "ingreso": "2026-11-25T10:15:52Z",
+      "salida": "2026-11-25T10:16:11Z",
+      "calidad_visual": "media",
+      "confianza_visual": 0.66,
+      "defectos_detectados": [
+        "color_irregular"
+      ],
+      "diametro_mm": 58,
+      "tamano": "pequeno",
+      "categoria_final": "mercado_nacional",
+      "probabilidad": 0.8,
+      "alertas": 1
     },
     {
-      "id_grupo": "G-0143",
+      "id_fruta": "M-0143",
       "estado": "ok",
-      "frutas_detectadas": 3,
-      "ingreso": "2026-11-18T10:15:17Z",
-      "salida": "2026-11-18T10:15:37Z",
-      "diametro_medio_mm": 103,
-      "uniformidad": "uniforme",
-      "frutas": [
-        { "id_fruta": "F1", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 103, "alertas": 0 },
-        { "id_fruta": "F2", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 108, "alertas": 0 },
-        { "id_fruta": "F3", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 98, "alertas": 0 }
-      ]
+      "ingreso": "2026-11-25T10:15:33Z",
+      "salida": "2026-11-25T10:15:52Z",
+      "calidad_visual": "alta",
+      "confianza_visual": 0.9,
+      "defectos_detectados": [],
+      "diametro_mm": 72,
+      "tamano": "grande",
+      "categoria_final": "exportacion",
+      "probabilidad": 0.91,
+      "alertas": 0
     },
     {
-      "id_grupo": "G-0142",
+      "id_fruta": "M-0142",
       "estado": "ok",
-      "frutas_detectadas": 4,
-      "ingreso": "2026-11-18T10:14:52Z",
-      "salida": "2026-11-18T10:15:12Z",
-      "diametro_medio_mm": 101,
-      "uniformidad": "uniforme",
-      "frutas": [
-        { "id_fruta": "F1", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 105, "alertas": 0 },
-        { "id_fruta": "F2", "categoria_final": "mercado_nacional", "tamano": "pequeno", "diametro_mm": 91, "alertas": 0 },
-        { "id_fruta": "F3", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 102, "alertas": 0 },
-        { "id_fruta": "F4", "categoria_final": "exportacion", "tamano": "mediano", "diametro_mm": 105, "alertas": 0 }
-      ]
+      "ingreso": "2026-11-25T10:15:14Z",
+      "salida": "2026-11-25T10:15:33Z",
+      "calidad_visual": "media",
+      "confianza_visual": 0.86,
+      "defectos_detectados": [
+        "mancha_leve"
+      ],
+      "diametro_mm": 61,
+      "tamano": "mediano",
+      "categoria_final": "mercado_nacional",
+      "probabilidad": 0.85,
+      "alertas": 0
     }
   ]
 }
