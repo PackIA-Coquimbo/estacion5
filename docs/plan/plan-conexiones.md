@@ -138,8 +138,8 @@ En **Advanced → Wireless → Wireless Settings**:
 1. En **Advanced → Network → LAN**, anota la **IP del router** (normalmente `192.168.0.1`) y la máscara (`255.255.255.0`). **No la cambies.**
 2. En **Advanced → Network → DHCP Server**:
    - [x] **DHCP Server** está **activado**.
-   - [x] Anota el rango de direcciones automáticas (**IP Address Pool**), por ejemplo `192.168.0.100 – 192.168.0.249`.
-   - Las IP fijas del plan (`.10` a `.16`) quedan **fuera** de ese rango a propósito, para que nunca se las entregue a otro equipo.
+   - [x] Deja el rango de direcciones automáticas (**IP Address Pool**) en `192.168.0.10 – 192.168.0.249` y guarda. Comprueba después de recargar la página que quedó guardado.
+   - Este router **solo permite reservar IP que estén dentro del rango**, por eso el rango empieza en `.10`. Las IP del plan (`.10` a `.16`) se protegen con su **reserva** (paso 2.5 y 4.3): una IP reservada no se le entrega a otro equipo. Reserva cada estación apenas tengas su MAC.
 3. Si el router usa otra red, corrige la tabla de la sección 2 antes de seguir.
 
 ### 1.7 Evitar reinicios sorpresa
@@ -236,7 +236,7 @@ ssh packia@192.168.0.1xx
 5. Conéctate de nuevo, ahora con la IP fija: `ssh packia@192.168.0.10`.
 6. Haz un nuevo respaldo del router (paso 1.8).
 
-> Si el router no acepta una IP fuera del rango automático, reserva la primera del rango (por ejemplo `192.168.0.100`), anótala en la sección 2 y úsala en todos los pasos siguientes en vez de `192.168.0.10`.
+> Si el router responde *"Enter an IP address within the IP address pool"*, el rango no incluye la `.10`: vuelve a 1.6, deja el rango en `192.168.0.10 – 192.168.0.249`, guarda (el router puede cortar la conexión 1–2 minutos), recarga para confirmar y recién entonces agrega la reserva.
 
 ### 2.6 Actualizar la Pi e instalar Docker y git
 
@@ -265,9 +265,13 @@ Ambos comandos deben mostrar un número de versión.
 cd ~
 git clone https://github.com/PackIA-Coquimbo/estacion5.git estacion5-backend
 cd estacion5-backend
+cp .env.example .env
+nano .env                                        # cambiar API_BIND_ADDRESS=127.0.0.1 por API_BIND_ADDRESS=192.168.0.10 (guardar: Ctrl+O, Enter; salir: Ctrl+X)
 docker compose -f docker-compose.yml up -d --build
 ```
 
+- ⚠️ **No te saltes el `.env`.** Sin él, la API queda publicada solo en `127.0.0.1` y responde dentro de la Pi, pero **no desde los notebooks ni las estaciones** (la prueba 2.8 falla).
+- La Pi ya debe tener la IP `192.168.0.10` (paso 2.5). Si no la tiene, Docker no puede publicar el puerto en esa dirección. Compruébalo con `hostname -I`.
 - La **primera vez tarda varios minutos**, porque descarga la imagen de Python para ARM64 e instala dependencias.
 - Se usa `-f docker-compose.yml` para tomar **solo la configuración de la Pi** (sin el modo de desarrollo).
 
@@ -318,7 +322,7 @@ Todos se escriben dentro de `~/estacion5-backend`:
 
 El simulador hace el mismo recorrido que harán las estaciones reales, sin necesitarlas.
 
-> ⚠️ **Importante:** hoy la API de `main` todavía valida con los **contratos v1**, y el simulador envía **contratos v2**. Por eso la API responderá **422** a los mensajes del simulador hasta que Gabriel actualice `app/schemas.py`. **Para probar la red esto no importa:** recibir un 422 demuestra que el mensaje llegó a la Pi y que la API respondió. Lo que indica un problema de red es un error de conexión o de tiempo de espera.
+> La API y el simulador usan los **contratos v3** (una mandarina por mensaje), así que cada mensaje debe responder **201**. Si aparece un **422**, el mensaje sí llegó a la Pi (la red funciona) pero no cumple el contrato. Lo que indica un problema de red es un error de conexión o de tiempo de espera.
 
 ### 3.1 Preparar el notebook (una sola vez)
 
@@ -355,7 +359,7 @@ En Windows PowerShell usa `curl.exe` en lugar de `curl`.
 ### 3.3 Correr el simulador
 
 ```bash
-python tools/simulador.py --url http://192.168.0.10:8000 --grupos 50
+python tools/simulador.py --url http://192.168.0.10:8000 --frutas 50
 ```
 
 Anota cuántos mensajes llegaron y cuántos fallaron por conexión.
@@ -364,12 +368,12 @@ Anota cuántos mensajes llegaron y cuántos fallaron por conexión.
 
 | # | Prueba | Cómo | Resultado esperado |
 |---|---|---|---|
-| 1 | Notebook por Wi-Fi 5 GHz | Conectado a `PackIA-Linea-5G`, 50 grupos | Sin errores de conexión |
-| 2 | Notebook por Wi-Fi 2,4 GHz | Conectado a `PackIA-Linea`, 50 grupos | Sin errores de conexión |
-| 3 | Notebook por cable | Cable a un puerto LAN libre, 50 grupos | Sin errores de conexión |
+| 1 | Notebook por Wi-Fi 5 GHz | Conectado a `PackIA-Linea-5G`, 50 mandarinas | Sin errores de conexión |
+| 2 | Notebook por Wi-Fi 2,4 GHz | Conectado a `PackIA-Linea`, 50 mandarinas | Sin errores de conexión |
+| 3 | Notebook por cable | Cable a un puerto LAN libre, 50 mandarinas | Sin errores de conexión |
 | 4 | Fallas simuladas | Agregar `--falla-cinta`, `--sin-e3`, `--baja-confianza`, `--duplicados` | La API responde a todos |
-| 5 | Corte de red | Desconectar el cable de la Pi 10 s durante una corrida con `--grupos 0` | Anotar qué mensajes se pierden y si se recupera al reconectar |
-| 6 | Carga | `--grupos 200 --velocidad 5` | Anotar tiempos y temperatura de la Pi |
+| 5 | Corte de red | Desconectar el cable de la Pi 10 s durante una corrida con `--frutas 0` (sin fin) | Anotar qué mensajes se pierden y si se recupera al reconectar |
+| 6 | Carga | `--frutas 200 --velocidad 5` | Anotar tiempos y temperatura de la Pi |
 
 ### 3.5 Correr los tests en la Pi
 
@@ -383,7 +387,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-Debe dar el mismo resultado que en los notebooks (hoy: 27 pasan y 46 se omiten hasta que existan los schemas v2).
+Debe dar el mismo resultado que en los notebooks: todos los tests pasan.
 
 ### ✅ Listo cuando
 
@@ -432,7 +436,7 @@ Envíale a cada estación este mensaje (cambiando `eX` y `EX`):
 > - Tu IP fija: `192.168.0.1X`.
 > - Envía cada mensaje con `POST` a: `http://192.168.0.10:8000/api/v1/ingest/eX`
 > - Encabezado: `Content-Type: application/json`
-> - Formato: el contrato v2 de `docs/formato_datos/EX.json`.
+> - Formato: el contrato v3 de `docs/formato_datos/EX.json` (un mensaje por mandarina). Guía con ejemplos: `docs/integracion/guia-api-e5.md`.
 > - Respuestas: `201` es aceptado; `422` es un mensaje con formato incorrecto (el texto de la respuesta dice qué campo falla); un error de conexión significa que no llegó.
 > - Si no llega o no hay respuesta en 5 s, guarda el mensaje y reintenta cada 2 s, hasta 5 veces.
 
@@ -453,14 +457,14 @@ curl.exe -X POST http://192.168.0.10:8000/api/v1/ingest/e6 -H "Content-Type: app
 ```
 
 - Se sugiere empezar por **E6**, porque su mensaje es el más simple.
-- Con la API actual (v1) la respuesta será 422 hasta que estén los schemas v2. Mientras tanto, la prueba confirma la conexión. Cuando los schemas v2 estén en `main`, hay que actualizar la Pi (`git pull` y reconstruir, ver 2.10), y la respuesta debe ser `201`.
+- La respuesta debe ser `201`. Si la Pi tiene una versión vieja de la API, actualízala (`git pull` y reconstruir, ver 2.10).
 - En la Pi, `docker compose logs -f` muestra cada mensaje que llega.
 
 ### ✅ Listo cuando
 
 - [ ] La tabla 4.1 está completa.
 - [ ] Cada estación hace `ping` a la Pi desde su equipo real.
-- [ ] Cada estación envía al menos un mensaje que la API responde (`201` cuando existan los schemas v2).
+- [ ] Cada estación envía al menos un mensaje que la API responde con `201`.
 
 ---
 
@@ -530,7 +534,7 @@ chromium-browser --kiosk "file:///home/packia/estacion5-backend/frontend/index.h
 ### 9.3 Corrida completa
 
 - [ ] Enviar datos con las estaciones reales, o con el simulador para las que falten.
-- [ ] Desconectar el cable de una estación y confirmar que E5 la marca como "sin señal" (cuando exista `/api/v1/estaciones/estado`).
+- [ ] Desconectar el cable de una estación y confirmar que E5 la marca como "sin señal" (`GET /api/v1/estaciones/estado`).
 - [ ] Revisar la temperatura de la Pi después de 30 minutos (`vcgencmd measure_temp`; sobre 80 °C es demasiado).
 - [ ] Anotar los tiempos y problemas en `docs/avance/`.
 
@@ -571,8 +575,8 @@ No hace falta esperar al switch: las fases 1 a 4 se pueden hacer solo con el rou
 | `ssh` avisa *REMOTE HOST IDENTIFICATION HAS CHANGED* | Se reinstaló la Pi con la misma IP | En el notebook: `ssh-keygen -R 192.168.0.10` y volver a entrar |
 | `apt update` o `get.docker.com` fallan | El router no tiene internet | Revisar el cable WAN o usar el plan B de la sección 12 |
 | `docker: permission denied` | Falta aplicar el permiso de Docker | Salir con `exit` y volver a entrar por SSH |
-| `/docs` abre en la Pi pero no desde el notebook | El notebook está en otra red | Confirmar que el notebook esté en `PackIA-Linea` y no en la red de la universidad |
-| La API responde **422** | El mensaje no cumple el contrato (o la API sigue en v1) | Leer el detalle de la respuesta: dice qué campo falla. Ver la nota de la Fase 3 |
+| `/docs` abre en la Pi pero no desde el notebook | Falta el `.env` con `API_BIND_ADDRESS=192.168.0.10` (paso 2.7), o el notebook está en otra red | En la Pi: `grep API_BIND .env` debe mostrar `192.168.0.10` (si no, corregir y repetir `docker compose -f docker-compose.yml up -d`). Confirmar que el notebook esté en `PackIA-Linea` y no en la red de la universidad |
+| La API responde **422** | El mensaje no cumple el contrato v3 (o la Pi tiene una versión vieja de la API) | Leer el detalle de la respuesta: dice qué campo falla. Ver la nota de la Fase 3 |
 | Un ESP32 no encuentra la red | Está buscando 5 GHz o la red usa solo WPA3 | Conectarlo a `PackIA-Linea` (2,4 GHz) con WPA2 |
 | Cortes intermitentes por Wi-Fi | Interferencia de otras redes | Pasar ese equipo a cable o fijar un canal en 1.5 (en 2,4 GHz: 1, 6 u 11) |
 | Toda la red se cae al conectar el switch | Bucle de cable en el switch | Revisar que ningún cable vaya de un puerto del switch a otro del mismo switch |
@@ -600,13 +604,13 @@ Completar al terminar cada fase. **Sin contraseñas.**
 | Dato | Valor |
 |---|---|
 | Red del router (IP / máscara) | `192.168.0.1` / `255.255.255.0` |
-| Rango DHCP automático | `192.168.0.100 – 192.168.0.249` (⚠️ confirmar después del reset del 25 de noviembre) |
+| Rango DHCP automático | `192.168.0.10 – 192.168.0.249` (desde el 27 de noviembre; la `.10` está reservada para la Pi) |
 | Nombre Wi-Fi 2,4 GHz / 5 GHz | `PackIA-Linea` / `PackIA-Linea-5G` |
 | Dónde están guardadas las contraseñas | Grupo del equipo |
-| Dónde está el respaldo del router (fecha) | Pendiente (el del 2026-11-18 quedó obsoleto tras el reset del 25) |
+| Dónde está el respaldo del router (fecha) | 2026-11-27, fuera del repo (el del 2026-11-18 quedó obsoleto) |
 | Versión del firmware del router | Sin anotar |
-| MAC de la Pi | Pendiente (Fase 2) |
-| IP de la Pi | Pendiente (`192.168.0.10` planificada) |
+| MAC de la Pi | `2C:CF:67:24:38:7B` (tarjeta cableada) |
+| IP de la Pi | `192.168.0.10`, reservada en el router |
 | Usuario de la Pi | `packia` |
 | MAC e IP de cada estación | Ver tabla 4.1 |
 

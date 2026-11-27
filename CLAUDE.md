@@ -83,8 +83,8 @@ Tests y simulador (Python 3.11):
 ```bash
 pip install -r requirements-dev.txt
 pytest -q
-python tools/simulador.py --dry-run --grupos 2      # ver los JSON sin enviarlos
-python tools/simulador.py --grupos 20 --velocidad 2 # enviar a http://localhost:8000
+python tools/simulador.py --dry-run --frutas 2      # ver los JSON sin enviarlos
+python tools/simulador.py --frutas 20 --velocidad 2 # enviar a http://localhost:8000
 python tools/simulador.py --rangos 92,112           # cortes de tamaño que usa el dashboard simulado
 ```
 
