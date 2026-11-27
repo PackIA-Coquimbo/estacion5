@@ -36,16 +36,15 @@
 |---|---|
 | Raspberry Pi 5 | ✅ Disponible |
 | Fuente oficial USB-C de 27 W para la Pi | ⏳ Por confirmar |
-| Tarjeta microSD de 32 GB | ✅ Disponible · ⚠️ no hay lector para grabarla; se usará un pendrive (ver Fase 2) |
-| Pendrive para el sistema de la Pi | ✅ Disponible |
+| Tarjeta microSD de 32 GB | ✅ Disponible · se graba con un adaptador SD |
 | Router TP-Link Archer AX1800 (Wi-Fi 6, doble banda) con su fuente | ✅ Disponible |
 | Monitor | ✅ Disponible |
 | Cable micro-HDMI a HDMI | ✅ Disponible |
-| Teclado y mouse (solo para la instalación) | ❌ Falta el teclado USB |
+| Teclado y mouse (solo para la instalación) | ✅ Teclado disponible |
 | Notebook con Windows o Linux para configurar y probar | ✅ Los del equipo |
 | Tubos PVC con abrazaderas y tees | ✅ Disponibles · falta medir si alcanzan (Fase 6) |
 | Codos y uniones PVC | ⏳ Por confirmar según el recorrido |
-| Cables de red (uno por equipo cableado, más 2 de repuesto) | ❌ Hay 1 (ocupado en el WAN); faltan al menos 2 ahora y uno por estación después |
+| Cables de red (uno por equipo cableado, más 2 de repuesto) | ❌ Hay 2 (uno en el WAN y otro malo); falta al menos 1 bueno ahora y uno por estación después |
 | Switch de 8 puertos | ⏳ Por conseguir |
 
 **Límite actual:** el router trae 4 puertos LAN. Uno es para la Pi, así que **solo 3 estaciones pueden ir por cable** hasta que llegue el switch. Las otras van por Wi-Fi mientras tanto.
@@ -59,7 +58,7 @@ Todas las IP de equipos de la línea se **reservan en el router** (paso 2.5), as
 | Equipo | IP | Conexión ahora | Conexión con switch |
 |---|---|---|---|
 | Router | `192.168.0.1` | — | — |
-| Raspberry Pi 5 (E5) | `192.168.0.10` | Cable, LAN 1 (provisorio: Wi-Fi `PackIA-Linea-5G`) | Cable |
+| Raspberry Pi 5 (E5) | `192.168.0.10` | Cable, LAN 1 | Cable |
 | E1 | `192.168.0.11` | Por definir | Cable |
 | E2 | `192.168.0.12` | Por definir | Cable |
 | E3 | `192.168.0.13` | Por definir | Cable |
@@ -166,14 +165,14 @@ En **Advanced → Wireless → Wireless Settings**:
 ### ✅ Listo cuando
 
 - [x] Un notebook conectado a `PackIA-Linea` abre `http://tplinkwifi.net` con la clave de administrador nueva.
-- [x] El respaldo de configuración está guardado.
+- [ ] El respaldo de configuración está guardado. (El del 18 de noviembre quedó obsoleto tras el reset del 25; falta uno nuevo.)
 - [x] La red real del router quedó anotada en la sección 2.
 
 ---
 
 ## 4. Fase 2 — Pi en la red con la API · Responsables: todos
 
-> ⚠️ **Cambio acordado el 18 de noviembre:** como no hay lector de microSD y hay un solo cable de red, el sistema se graba en un **pendrive** y la Pi se conecta **por Wi-Fi** a `PackIA-Linea-5G` mientras no haya otro cable. En el Imager: almacenamiento = pendrive y Wi-Fi configurado (país CL). Al pasar a cable, la reserva de `.10` se hace con la MAC **de la tarjeta cableada**. Detalle en [`../avance/registro-conexiones.md`](../avance/registro-conexiones.md), sección 3.
+> **Avance:** el 25 de noviembre se grabó la microSD con un adaptador SD y se siguió el plan original (microSD y Pi por cable). La idea del pendrive y la Wi-Fi provisoria del 18 ya no se usa. Detalle y pendientes en [`../avance/registro-conexiones.md`](../avance/registro-conexiones.md), sección 4.
 
 ### 2.1 Preparar la tarjeta microSD (en un notebook)
 
@@ -206,7 +205,7 @@ En **Advanced → Wireless → Wireless Settings**:
 
 ### 2.3 Encontrar la Pi en la red
 
-1. En el notebook, entra a `http://tplinkwifi.net` → **Network Map → Clients** (o "Clientes").
+1. En el notebook, entra a `http://tplinkwifi.net` → **Network Map → Clients** (o "Clientes"). Si no aparece, la lista está en **Advanced → Network → DHCP Server**.
 2. Busca el equipo llamado **`e5-pi`** y anota:
    - Su **IP actual** (algo como `192.168.0.1xx`).
    - Su **MAC** (algo como `D8:3A:DD:xx:xx:xx`).
@@ -418,7 +417,7 @@ Completa esta tabla con cada equipo de estación:
 Repite esto con cada estación:
 
 1. Conecta el equipo por cable al puerto LAN asignado, o al Wi-Fi que le corresponda.
-2. En el router, busca el equipo en **Network Map → Clients** y anota su **MAC**.
+2. En el router, busca el equipo en **Network Map → Clients** (o en **Advanced → Network → DHCP Server**) y anota su **MAC**.
 3. Resérvale su IP de la sección 2 (como en el paso 2.5), con la descripción `E1`, `E2`, etc.
 4. Reinicia la conexión de red del equipo (o el equipo) para que tome la IP nueva.
 5. Comprueba desde el equipo de la estación: `ping 192.168.0.10`.
@@ -601,10 +600,10 @@ Completar al terminar cada fase. **Sin contraseñas.**
 | Dato | Valor |
 |---|---|
 | Red del router (IP / máscara) | `192.168.0.1` / `255.255.255.0` |
-| Rango DHCP automático | `192.168.0.100 – 192.168.0.249` |
+| Rango DHCP automático | `192.168.0.100 – 192.168.0.249` (⚠️ confirmar después del reset del 25 de noviembre) |
 | Nombre Wi-Fi 2,4 GHz / 5 GHz | `PackIA-Linea` / `PackIA-Linea-5G` |
 | Dónde están guardadas las contraseñas | Grupo del equipo |
-| Dónde está el respaldo del router (fecha) | 2026-11-18 (falta anotar dónde quedó el archivo) |
+| Dónde está el respaldo del router (fecha) | Pendiente (el del 2026-11-18 quedó obsoleto tras el reset del 25) |
 | Versión del firmware del router | Sin anotar |
 | MAC de la Pi | Pendiente (Fase 2) |
 | IP de la Pi | Pendiente (`192.168.0.10` planificada) |
