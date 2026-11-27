@@ -202,7 +202,7 @@ const render={
       ["Estaciones",`${L(conn===5?"ok":"alerta")}${conn} de 5`],["Servidor :8000",`${L("ok")}En línea`],
       ["Base de datos",`${L("ok")}${num(S.msgs)}`],["Internet",`${L("ok")}No requerido`],
       ["Temperatura",`${L(p.temp>70?"alerta":"ok")}${p.temp.toFixed(0)} °C`],["CPU",`${p.cpu.toFixed(0)} %`],
-      ["Memoria",`${dec(p.ram)}/8 GB`],["Disco","14 %"]
+      ["Memoria",`${dec(p.ram)}/4 GB`],["Disco","14 %"]
     ].map(([k,v])=>`<div><span>${k}</span><b>${v}</b></div>`).join("");
     const up=Date.now()-S.shiftStart;$("uptime").textContent=`Encendida hace ${Math.floor(up/3600e3)} h ${Math.floor(up%3600e3/60e3)} min`},
   top(){
