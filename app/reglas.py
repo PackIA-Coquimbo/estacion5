@@ -4,7 +4,6 @@ from typing import Mapping, Sequence
 
 from app.config import (
     CONFIANZA_MINIMA,
-    DIFERENCIA_DIAMETRO_MAX_MM,
     MINIMO_BAJAS_TENDENCIA,
     SEGUNDOS_SIN_SENAL,
     VENTANA_CONFIANZA,
@@ -25,9 +24,6 @@ def evaluar(
     lectura: E1Payload | E2Payload | E3Payload | E4Payload | E6Payload,
     *,
     confianza_reciente: Sequence[float] = (),
-    frutas_esperadas: int | None = None,
-    conteos_por_estacion: Mapping[str, int] | None = None,
-    diferencia_diametro_max_mm: float = DIFERENCIA_DIAMETRO_MAX_MM,
 ) -> list[AlertaEvaluada]:
     alertas = []
 
@@ -35,7 +31,8 @@ def evaluar(
         if not lectura.datos.validez_imagen:
             alertas.append(
                 AlertaEvaluada(
-                    "e1_imagen_invalida", "E1", "falla", "Imagen no válida"
+                    "e1_imagen_invalida", "E1", "falla", "Imagen no válida",
+                    lectura.id_fruta,
                 )
             )
         if (
@@ -48,46 +45,24 @@ def evaluar(
                     "E1",
                     "alerta",
                     "Captura no aceptada o posición incorrecta",
+                    lectura.id_fruta,
                 )
             )
 
-    if isinstance(lectura, (E1Payload, E2Payload, E3Payload, E4Payload)):
-        esperadas = (
-            lectura.datos.frutas_detectadas
-            if isinstance(lectura, E1Payload)
-            else frutas_esperadas
-        )
-        if esperadas is not None and conteos_por_estacion:
-            for estacion, cantidad in conteos_por_estacion.items():
-                if cantidad != esperadas:
-                    alertas.append(
-                        AlertaEvaluada(
-                            f"conteo_frutas_{estacion.lower()}",
-                            estacion,
-                            "alerta",
-                            f"E1 detectó {esperadas} frutas y {estacion} informó {cantidad}",
-                        )
-                    )
-
     if isinstance(lectura, E2Payload):
-        confianzas = [fruta.confianza_visual for fruta in lectura.frutas]
-        for fruta in lectura.frutas:
-            if fruta.confianza_visual < CONFIANZA_MINIMA:
-                alertas.append(
-                    AlertaEvaluada(
-                        "e2_confianza_baja",
-                        "E2",
-                        "alerta",
-                        f"Confianza visual baja: {fruta.confianza_visual:.2f}",
-                        fruta.id_fruta,
-                    )
+        if lectura.datos.confianza_visual < CONFIANZA_MINIMA:
+            alertas.append(
+                AlertaEvaluada(
+                    "e2_confianza_baja",
+                    "E2",
+                    "alerta",
+                    f"Confianza visual baja: {lectura.datos.confianza_visual:.2f}",
+                    lectura.id_fruta,
                 )
-        actuales = confianzas[-VENTANA_CONFIANZA:]
-        anteriores = list(confianza_reciente)[
-            : max(0, VENTANA_CONFIANZA - len(actuales))
-        ]
+            )
+        recientes = [lectura.datos.confianza_visual, *confianza_reciente]
         if (
-            sum(valor < CONFIANZA_MINIMA for valor in [*anteriores, *actuales])
+            sum(valor < CONFIANZA_MINIMA for valor in recientes[:VENTANA_CONFIANZA])
             >= MINIMO_BAJAS_TENDENCIA
         ):
             alertas.append(
@@ -100,44 +75,27 @@ def evaluar(
                 )
             )
 
-    if isinstance(lectura, E3Payload):
-        diametros = [fruta.diametro_mm for fruta in lectura.frutas]
-        if (
-            len(diametros) > 1
-            and max(diametros) - min(diametros) > diferencia_diametro_max_mm
-        ):
+    if isinstance(lectura, E4Payload):
+        if lectura.datos.categoria_final == "rechazo":
             alertas.append(
                 AlertaEvaluada(
-                    "e3_grupo_irregular",
-                    "E3",
-                    "alerta",
-                    "La diferencia de diámetro del grupo supera "
-                    f"{diferencia_diametro_max_mm:g} mm",
+                    "e4_fruta_rechazada",
+                    "E4",
+                    "falla",
+                    "Fruta clasificada como rechazo",
+                    lectura.id_fruta,
                 )
             )
-
-    if isinstance(lectura, E4Payload):
-        for fruta in lectura.frutas:
-            if fruta.categoria_final == "rechazo":
-                alertas.append(
-                    AlertaEvaluada(
-                        "e4_fruta_rechazada",
-                        "E4",
-                        "falla",
-                        "Fruta clasificada como rechazo",
-                        fruta.id_fruta,
-                    )
+        if lectura.datos.requiere_revision_manual:
+            alertas.append(
+                AlertaEvaluada(
+                    "e4_revision_manual",
+                    "E4",
+                    "alerta",
+                    "La fruta requiere revisión manual",
+                    lectura.id_fruta,
                 )
-            if fruta.requiere_revision_manual:
-                alertas.append(
-                    AlertaEvaluada(
-                        "e4_revision_manual",
-                        "E4",
-                        "alerta",
-                        "La fruta requiere revisión manual",
-                        fruta.id_fruta,
-                    )
-                )
+            )
 
     if isinstance(lectura, E6Payload) and (
         lectura.datos.falla_mecanica_detectada
