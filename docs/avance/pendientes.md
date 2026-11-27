@@ -23,10 +23,10 @@ no se incluye migración automática de bases existentes.
 
 | Área | Estado |
 |---|---|
-| Backend (A, Gabriel) | Contratos v2, persistencia, consultas, alertas y estado de estaciones **hechos** (PR #13). Los **73 tests pasan**. Quedan 3 errores (sección 2). |
+| Backend (A, Gabriel) | Migrado a **contratos v3** por mandarina (PR #21): schemas, modelos SQLite, rutas, métricas, reglas, simulador y tests; además pronóstico y respaldo SQLite. Falta validar con E1–E6 y probar en la Pi. |
 | Integración (B, Maicol) | Simulador, tests y Docker hechos desde el 13 de noviembre. Sin avances nuevos; quedan la coordinación con otras estaciones y la prueba en la Pi. |
 | Dashboard (C, Christian) | Pantalla terminada con datos simulados y servida por la API en `/` (PR #11 y #12). **Falta conectarla a la API**: las respuestas no tienen la forma que espera `api.js` (sección 4). |
-| Red de la línea | Fase 1 (router) lista. Fase 2 (Pi) **sin empezar**. Ver `docs/avance/registro-conexiones.md`. |
+| Red de la línea | Fase 1 (router) lista (rehecha el 25/11). Fase 2 (Pi) **en curso**: microSD grabada pero aún no puesta en la Pi; falta un cable bueno. Ver `docs/avance/registro-conexiones.md`. |
 
 ## 1b. Cambio a una mandarina por pasada (contratos v3) — 25 de noviembre
 
@@ -88,12 +88,12 @@ Comparación de las respuestas reales con `frontend/mock/` (lo que espera el das
 Detalle en `docs/avance/registro-conexiones.md` y pasos en `docs/plan/plan-conexiones.md`.
 
 - [x] Fase 1 — Router configurado y respaldado.
-- [ ] **Fase 2 — Pi con la API** (sin empezar): grabar Raspberry Pi OS en un pendrive, arrancar, SSH, reservar `192.168.0.10`, Docker, API y prueba de reinicio.
+- [ ] **Fase 2 — Pi con la API** (en curso): microSD grabada el 25/11; falta ponerla en la Pi, conectarla con un cable bueno, SSH, reservar `192.168.0.10`, Docker, API y prueba de reinicio.
 - [ ] Fase 3 — Prueba de red con el simulador.
 - [ ] Fase 4 — Conectar las estaciones reales.
 - [ ] Fase 5 — Switch · Fase 6 — Tubos PVC · Fase 7 — Ensayo general.
 
-**Material que falta:** cables de red (hoy hay 1; se necesitan al menos 2 más ahora y uno por estación después), teclado USB y switch de 8 puertos.
+**Material que falta:** cables de red (hay 2 y uno está malo; falta al menos 1 bueno ahora y uno por estación después) y switch de 8 puertos.
 
 **Corrección hecha:** `docs/plan/conexion-estaciones.md` ya usa `192.168.0.10` (antes `192.168.10.10`).
 
