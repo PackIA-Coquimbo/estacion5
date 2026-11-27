@@ -11,7 +11,6 @@ __pycache__/
 venv
 .pytest_cache
 tests
-tools
 docs
 *.db
 *.sqlite3

@@ -14,6 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código fuente y el dashboard (la API lo servirá como archivos estáticos)
 COPY ./app ./app
 COPY ./frontend ./frontend
+COPY ./tools ./tools
 
 # Carpeta de la base SQLite; en compose se monta como volumen persistente
 RUN mkdir -p /app/data
