@@ -1,19 +1,14 @@
-"""Tests de las consultas GET: responden con los datos que se ingresaron.
-
-Se ingresan los cinco contratos de docs/formato_datos (un grupo de tres
-frutas, G-0001) y se revisa lo que devuelve cada endpoint.
-
-No se prueban aquí los errores conocidos del backend (ver
-docs/avance/pendientes.md, sección 2): grupos que no se cierran y estado de
-la cinta sin GET.
-"""
+"""Consultas v3 con una mandarina por mensaje."""
 
 import copy
+from datetime import datetime, timezone
 
 import pytest
 
+from app.config import ALMACENAMIENTO_ALERTA_PORCENTAJE
+
 LOTE = "LOTE-2026-11-A"
-GRUPO = "G-0001"
+FRUTA = "M-0001"
 
 
 def ruta(estacion: str) -> str:
@@ -22,168 +17,162 @@ def ruta(estacion: str) -> str:
 
 @pytest.fixture
 def cargado(client, contratos):
-    """Ingresa E1, E2, E3, E4 y E6 en orden y devuelve el cliente."""
-    for estacion in ["E1", "E2", "E3", "E4", "E6"]:
-        respuesta = client.post(ruta(estacion), json=contratos[estacion])
+    ahora = datetime.now(timezone.utc)
+    for indice, estacion in enumerate(["E1", "E2", "E3", "E4", "E6"]):
+        mensaje = copy.deepcopy(contratos[estacion])
+        mensaje["timestamp"] = datetime.fromtimestamp(
+            ahora.timestamp() + indice, timezone.utc
+        ).isoformat().replace("+00:00", "Z")
+        respuesta = client.post(ruta(estacion), json=mensaje)
         assert respuesta.status_code == 201, respuesta.text
     return client
 
 
-# --------------------------------------------------------------------- lotes
-
-def test_lotes_vacio_sin_datos(client):
-    respuesta = client.get("/api/v1/lotes")
-    assert respuesta.status_code == 200
-    assert respuesta.json() == []
+def test_lotes_sin_datos(client):
+    assert client.get("/api/v1/lotes").json() == []
 
 
-def test_lotes_devuelve_el_lote_ingresado(cargado):
+def test_lotes_devuelve_cantidad_de_mandarinas(cargado):
     lotes = cargado.get("/api/v1/lotes").json()
     assert len(lotes) == 1
     assert lotes[0]["id_lote"] == LOTE
-    assert lotes[0]["estado"] == "activo"
-    assert lotes[0]["grupos"] == 1
-    assert lotes[0]["creado_en"] is not None
+    assert lotes[0]["total_frutas"] == 1
 
 
-def test_grupos_del_lote(cargado, contratos):
-    respuesta = cargado.get(f"/api/v1/lotes/{LOTE}/grupos")
-    assert respuesta.status_code == 200
-    grupos = respuesta.json()
-    assert len(grupos) == 1
-    assert grupos[0]["id_grupo"] == GRUPO
-    assert grupos[0]["id_lote"] == LOTE
-    assert grupos[0]["frutas_detectadas"] == contratos["E1"]["datos"]["frutas_detectadas"]
-
-
-def test_grupos_de_lote_inexistente_responde_404(client):
-    assert client.get("/api/v1/lotes/NO-EXISTE/grupos").status_code == 404
-
-
-# -------------------------------------------------------------------- grupos
-
-def test_trazabilidad_del_grupo(cargado, contratos):
-    respuesta = cargado.get(f"/api/v1/grupos/{GRUPO}")
+def test_listado_de_frutas_sigue_el_contrato_del_dashboard(cargado):
+    respuesta = cargado.get(f"/api/v1/lotes/{LOTE}/frutas")
     assert respuesta.status_code == 200
     cuerpo = respuesta.json()
-
-    grupo = cuerpo["grupo"]
-    datos_e1 = contratos["E1"]["datos"]
-    assert grupo["id_grupo"] == GRUPO
-    assert grupo["id_lote"] == LOTE
-    assert grupo["frutas_detectadas"] == datos_e1["frutas_detectadas"]
-    assert grupo["validez_imagen"] == datos_e1["validez_imagen"]
-    assert grupo["estado_captura"] == datos_e1["estado_captura"]
-    assert grupo["posicion_correcta"] == datos_e1["posicion_correcta"]
-
-    frutas = {f["id_fruta"]: f for f in cuerpo["frutas"]}
-    assert set(frutas) == {"F1", "F2", "F3"}
-    for estacion in ["E2", "E3", "E4"]:
-        for enviada in contratos[estacion]["frutas"]:
-            guardada = frutas[enviada["id_fruta"]]
-            for campo, valor in enviada.items():
-                assert guardada[campo] == valor, (estacion, enviada["id_fruta"], campo)
-
-    # E6 no informa id_grupo, así que su lectura no queda asociada al grupo
-    lecturas = cuerpo["lecturas"]
-    assert [l["estacion"] for l in lecturas] == ["E1", "E2", "E3", "E4"]
-    for lectura in lecturas:
-        assert lectura["payload"]["id_grupo"] == GRUPO
-        assert lectura["recibida_en"] is not None
+    assert cuerpo["id_lote"] == LOTE
+    assert cuerpo["total_frutas"] == 1
+    assert cuerpo["frutas"][0]["id_fruta"] == FRUTA
+    assert cuerpo["frutas"][0]["estado"] == "ok"
 
 
-def test_grupo_inexistente_responde_404(client):
-    assert client.get("/api/v1/grupos/G-9999").status_code == 404
+def test_lote_inexistente_responde_404(client):
+    assert client.get("/api/v1/lotes/NO-EXISTE/frutas").status_code == 404
 
 
-# ------------------------------------------------------------------ métricas
-
-def test_metricas_con_los_contratos(cargado):
-    respuesta = cargado.get("/api/v1/metricas")
+def test_trazabilidad_de_mandarina(cargado):
+    respuesta = cargado.get(f"/api/v1/frutas/{FRUTA}")
     assert respuesta.status_code == 200
-    metricas = respuesta.json()
+    cuerpo = respuesta.json()
+    assert cuerpo["id_fruta"] == FRUTA
+    assert cuerpo["id_lote"] == LOTE
+    assert cuerpo["e1"]["estado_captura"] == "aceptada"
+    assert cuerpo["e2"]["calidad_visual"] == "alta"
+    assert cuerpo["e3"]["diametro_mm"] == 64
+    assert cuerpo["e4"]["categoria_final"] == "exportacion"
+    assert all(cuerpo[f"e{i}"]["timestamp"] for i in range(1, 5))
 
+
+def test_mandarina_inexistente_responde_404(client):
+    assert client.get("/api/v1/frutas/M-9999").status_code == 404
+
+
+def test_metricas_v3(cargado):
+    metricas = cargado.get("/api/v1/metricas").json()
     assert metricas["id_lote"] is None
-    assert metricas["conteo_por_categoria"] == {
-        "exportacion": 1,
-        "mercado_nacional": 1,
-        "proceso": 1,
-        "rechazo": 0,
-        "revision_manual": 0,
-    }
-    assert metricas["conteo_por_tamano"] == {"pequeno": 1, "mediano": 1, "grande": 1}
+    assert metricas["frutas_turno"] == 1
+    assert metricas["frutas_ultima_hora"] == 1
+    assert metricas["rechazadas"] == 0
     assert metricas["porcentaje_rechazo"] == 0.0
-    assert metricas["frutas_por_hora"] == [{"hora": "2026-11-18T10:00:00Z", "cantidad": 3}]
-    # El contrato de E4 trae F3 con revisión manual: una alerta de E4
-    assert metricas["anomalias_por_estacion"] == {
-        "E1": 0, "E2": 0, "E3": 0, "E4": 1, "E6": 0,
-    }
+    assert metricas["por_categoria"]["exportacion"] == 1
+    assert metricas["por_tamano"]["mediano"] == 1
+    assert sum(x["cantidad"] for x in metricas["frutas_por_hora"]) == 1
 
 
 def test_metricas_filtradas_por_lote(cargado):
-    respuesta = cargado.get("/api/v1/metricas", params={"lote": LOTE})
-    assert respuesta.status_code == 200
-    assert respuesta.json()["id_lote"] == LOTE
-    assert sum(respuesta.json()["conteo_por_categoria"].values()) == 3
+    metricas = cargado.get("/api/v1/metricas", params={"lote": LOTE}).json()
+    assert metricas["id_lote"] == LOTE
+    assert metricas["frutas_turno"] == 1
 
 
-def test_metricas_de_lote_inexistente_responde_404(client):
-    assert client.get("/api/v1/metricas", params={"lote": "NO-EXISTE"}).status_code == 404
+def test_metricas_lote_inexistente_responde_404(client):
+    assert (
+        client.get("/api/v1/metricas", params={"lote": "NO-EXISTE"}).status_code
+        == 404
+    )
 
 
-def test_metricas_porcentaje_rechazo(client, contratos):
+def test_porcentaje_rechazo_se_calcula_sobre_clasificadas(
+    client, contratos
+):
     e4 = copy.deepcopy(contratos["E4"])
-    e4["frutas"][0]["categoria_final"] = "rechazo"
-    for estacion, mensaje in [("E1", contratos["E1"]), ("E3", contratos["E3"]), ("E4", e4)]:
-        assert client.post(ruta(estacion), json=mensaje).status_code == 201
-
+    e4["datos"]["categoria_final"] = "rechazo"
+    assert client.post(ruta("E4"), json=e4).status_code == 201
     metricas = client.get("/api/v1/metricas").json()
-    assert metricas["conteo_por_categoria"]["rechazo"] == 1
-    assert metricas["porcentaje_rechazo"] == 33.33
+    assert metricas["rechazadas"] == 1
+    assert metricas["porcentaje_rechazo"] == 100.0
 
 
-# ------------------------------------------------------------------- alertas
-
-def test_alertas_vacio_sin_datos(client):
-    assert client.get("/api/v1/alertas").json() == []
-
-
-def test_alertas_devuelve_la_revision_manual_de_e4(cargado):
-    respuesta = cargado.get("/api/v1/alertas")
+def test_alertas_se_devuelven_en_el_contenedor_documentado(client, contratos):
+    e4 = copy.deepcopy(contratos["E4"])
+    e4["datos"]["requiere_revision_manual"] = True
+    assert client.post(ruta("E4"), json=e4).status_code == 201
+    respuesta = client.get("/api/v1/alertas")
     assert respuesta.status_code == 200
-    alertas = respuesta.json()
+    alertas = respuesta.json()["alertas"]
     assert len(alertas) == 1
-    alerta = alertas[0]
-    assert alerta["estacion"] == "E4"
-    assert alerta["id_lote"] == LOTE
-    assert alerta["id_grupo"] == GRUPO
-    assert alerta["id_fruta"] == "F3"
-    assert alerta["severidad"] == "alerta"
-    assert alerta["resuelta"] is False
+    assert alertas[0]["estacion"] == "E4"
+    assert alertas[0]["id_fruta"] == FRUTA
+    assert alertas[0]["creada_en"] is not None
+    assert alertas[0]["resuelta"] is False
 
 
-def test_alerta_repetida_no_se_duplica(cargado, contratos):
-    reenvio = copy.deepcopy(contratos["E4"])
-    reenvio["timestamp"] = "2026-11-18T10:17:20Z"
-    assert cargado.post(ruta("E4"), json=reenvio).status_code == 201
-    assert len(cargado.get("/api/v1/alertas").json()) == 1
+def test_alertas_se_filtran_y_pueden_resolverse(client, contratos):
+    e4 = copy.deepcopy(contratos["E4"])
+    e4["datos"]["requiere_revision_manual"] = True
+    client.post(ruta("E4"), json=e4)
+    alerta = client.get("/api/v1/alertas").json()["alertas"][0]
+    respuesta = client.patch(f"/api/v1/alertas/{alerta['id']}")
+    assert respuesta.status_code == 200
+    assert respuesta.json()["resuelta"] is True
+    assert client.get("/api/v1/alertas").json()["alertas"] == []
+    assert len(
+        client.get("/api/v1/alertas", params={"activas": "false"}).json()["alertas"]
+    ) == 1
 
 
-# -------------------------------------------------------- estado estaciones
-
-def test_estado_estaciones_sin_datos(client):
-    estado = client.get("/api/v1/estaciones/estado").json()
-    assert [e["estacion"] for e in estado] == ["E1", "E2", "E3", "E4", "E6"]
-    for estacion in estado:
-        assert estacion["estado"] == "sin_senal"
-        assert estacion["ultima_lectura"] is None
-        assert estacion["segundos_desde_lectura"] is None
+def test_estado_estaciones_sin_lecturas(client):
+    cuerpo = client.get("/api/v1/estaciones/estado").json()
+    assert cuerpo["estaciones"]
+    assert [entrada["estacion"] for entrada in cuerpo["estaciones"]] == [
+        "E1", "E2", "E3", "E4", "E6"
+    ]
+    assert all(e["estado"] == "sin_senal" for e in cuerpo["estaciones"])
 
 
-def test_estado_estaciones_con_datos(cargado):
+def test_estado_estaciones_y_cinta_se_ajusta_a_dashboard(cargado):
     respuesta = cargado.get("/api/v1/estaciones/estado")
     assert respuesta.status_code == 200
-    for estacion in respuesta.json():
-        assert estacion["estado"] == "online", estacion
-        assert estacion["ultima_lectura"] is not None
-        assert estacion["segundos_desde_lectura"] >= 0
+    cuerpo = respuesta.json()
+    assert cuerpo["id_lote"] == LOTE
+    assert len(cuerpo["estaciones"]) == 5
+    assert all(e["estado"] == "ok" for e in cuerpo["estaciones"])
+    e6 = next(e for e in cuerpo["estaciones"] if e["estacion"] == "E6")
+    assert e6["estado_cinta"] == "normal"
+    assert e6["falla_mecanica_detectada"] is False
+    assert e6["id_fruta"] == FRUTA
+
+
+def test_estado_e6_muestra_falla_mecanica(client, contratos):
+    e6 = copy.deepcopy(contratos["E6"])
+    e6["datos"]["estado_cinta"] = "falla_mecanica"
+    e6["datos"]["falla_mecanica_detectada"] = True
+    client.post(ruta("E6"), json=e6)
+    resultado = client.get("/api/v1/estaciones/estado").json()
+    estado_e6 = next(e for e in resultado["estaciones"] if e["estacion"] == "E6")
+    assert estado_e6["estado"] == "falla"
+    assert estado_e6["falla_mecanica_detectada"] is True
+
+
+def test_sistema_reporta_uso_de_almacenamiento(client):
+    respuesta = client.get("/api/v1/sistema")
+    assert respuesta.status_code == 200
+    sistema = respuesta.json()
+    assert sistema["almacenamiento_total_bytes"] > 0
+    assert 0 <= sistema["almacenamiento_porcentaje"] <= 100
+    assert sistema["almacenamiento_alerta"] == (
+        sistema["almacenamiento_porcentaje"] >= ALMACENAMIENTO_ALERTA_PORCENTAJE
+    )

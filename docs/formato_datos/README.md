@@ -4,7 +4,9 @@ Estos JSON son la **única fuente de verdad** de lo que cada estación envía a 
 
 **Regla general:** la cinta lleva **una mandarina a la vez**. Cada estación envía **un mensaje por mandarina**, con sus resultados en `datos`. E6 informa el estado de la cinta y no depende de una mandarina.
 
-> **Cambio v2 → v3 (25 de noviembre de 2026):** se elimina el grupo de frutas. Ya no existen `id_grupo` ni la lista `frutas[]`; cada mensaje trae un solo `id_fruta`. E1 deja de enviar `frutas_detectadas` (siempre sería 1) y E6 cambia `id_grupo_en_cinta` por `id_fruta_en_cinta`. Los tamaños de E3 pasan a rangos de mandarina. Hasta que `app/schemas.py` se actualice, la API sigue esperando v2 (ver `docs/avance/pendientes.md`).
+> **Cambio v2 → v3 (25 de noviembre de 2026):** se elimina el grupo de frutas. Ya no existen `id_grupo` ni la lista `frutas[]`; cada mensaje trae un solo `id_fruta`. E1 deja de enviar `frutas_detectadas` y E6 informa `id_fruta_en_cinta`.
+>
+> **Estado (26 de noviembre de 2026):** la rama `feat/e5-api-v3-integracion` actualiza schemas, persistencia, endpoints y simulador a v3. Los equipos de E1–E6 aún deben adaptar sus emisores/consumidores; consulta [`docs/integracion/guia-api-e5.md`](../integracion/guia-api-e5.md). Los cortes 60/70 mm siguen pendientes de confirmación de E3.
 
 ## Endpoints
 
@@ -23,7 +25,7 @@ Respuesta esperada: **201** si el mensaje es válido y **422** si falta un campo
 | Campo | Tipo | Obligatorio | Notas |
 |---|---|---|---|
 | `id_lote` | texto | sí | Ejemplo: `LOTE-2026-11-A` |
-| `id_fruta` | texto | sí (excepto E6) | Identifica la mandarina en toda la línea. Ejemplo: `M-0001` |
+| `id_fruta` | texto | sí (excepto E6) | E1 lo asigna y las demás estaciones lo reutilizan. Debe ser único entre lotes. Ejemplo: `M-0001` |
 | `estacion` | `E1`, `E2`, `E3`, `E4` o `E6` | sí | Debe coincidir con la ruta |
 | `timestamp` | fecha ISO 8601 **con zona horaria** | sí | La pone la estación al medir. Ejemplo: `2026-11-25T10:15:30Z` |
 | `datos` | objeto | sí | Campos propios de cada estación (abajo) |

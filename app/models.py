@@ -13,8 +13,8 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.types import TypeDecorator
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.types import TypeDecorator
 
 from app.db import Base
 
@@ -35,11 +35,11 @@ class UTCDateTime(TypeDecorator):
         return value.astimezone(timezone.utc)
 
     def process_result_value(self, value, _dialect):
-        if value is not None:
-            if value.tzinfo is None:
-                value = value.replace(tzinfo=timezone.utc)
-            return value.astimezone(timezone.utc)
-        return value
+        if value is None:
+            return None
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc)
 
 
 class Lote(Base):
@@ -61,38 +61,27 @@ class Lote(Base):
     estado: Mapped[str] = mapped_column(String(20), default="activo", nullable=False)
 
 
-class Grupo(Base):
-    __tablename__ = "grupo"
+class Fruta(Base):
+    __tablename__ = "fruta"
+    __table_args__ = (
+        CheckConstraint(
+            "estado IN ('en_proceso', 'ok', 'anomalia', 'rechazo')",
+            name="ck_fruta_estado",
+        ),
+        Index("ix_fruta_lote_ingreso", "id_lote", "ingreso"),
+        Index("ix_fruta_salida_categoria", "salida", "e4_categoria_final"),
+    )
 
-    id_grupo: Mapped[str] = mapped_column(String(100), primary_key=True)
+    id_fruta: Mapped[str] = mapped_column(String(100), primary_key=True)
     id_lote: Mapped[str] = mapped_column(
         String(50),
         ForeignKey("lote.id_lote", ondelete="CASCADE"),
         nullable=False,
         index=True,
     )
-    frutas_detectadas: Mapped[int | None] = mapped_column(Integer)
     e1_validez_imagen: Mapped[bool | None] = mapped_column(Boolean)
     e1_estado_captura: Mapped[str | None] = mapped_column(String(30))
     e1_posicion_correcta: Mapped[bool | None] = mapped_column(Boolean)
-    estado: Mapped[str] = mapped_column(String(30), default="en_proceso", nullable=False)
-    ingreso: Mapped[datetime] = mapped_column(
-        UTCDateTime(), default=ahora_utc, server_default=func.current_timestamp()
-    )
-    salida: Mapped[datetime | None] = mapped_column(UTCDateTime())
-
-
-class Fruta(Base):
-    __tablename__ = "fruta"
-    __table_args__ = (
-        UniqueConstraint("id_grupo", "id_fruta", name="uq_fruta_grupo_id"),
-    )
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    id_grupo: Mapped[str] = mapped_column(
-        ForeignKey("grupo.id_grupo", ondelete="CASCADE"), nullable=False
-    )
-    id_fruta: Mapped[str] = mapped_column(String(100), nullable=False)
     e2_calidad_visual: Mapped[str | None] = mapped_column(String(40))
     e2_confianza_visual: Mapped[float | None] = mapped_column(Float)
     e2_defectos: Mapped[list[str] | None] = mapped_column(JSON)
@@ -101,6 +90,13 @@ class Fruta(Base):
     e4_categoria_final: Mapped[str | None] = mapped_column(String(40))
     e4_probabilidad: Mapped[float | None] = mapped_column(Float)
     e4_revision_manual: Mapped[bool | None] = mapped_column(Boolean)
+    estado: Mapped[str] = mapped_column(
+        String(30), default="en_proceso", nullable=False
+    )
+    ingreso: Mapped[datetime] = mapped_column(
+        UTCDateTime(), default=ahora_utc, server_default=func.current_timestamp()
+    )
+    salida: Mapped[datetime | None] = mapped_column(UTCDateTime())
 
 
 class Lectura(Base):
@@ -108,16 +104,14 @@ class Lectura(Base):
     __table_args__ = (
         UniqueConstraint("payload_hash", name="uq_lectura_payload_hash"),
         Index("ix_lectura_estacion_ts", "estacion", "ts_recepcion"),
-        Index("ix_lectura_lote_grupo", "id_lote", "id_grupo"),
+        Index("ix_lectura_lote_fruta", "id_lote", "id_fruta"),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     id_lote: Mapped[str] = mapped_column(
         String(50), ForeignKey("lote.id_lote", ondelete="CASCADE"), nullable=False
     )
-    id_grupo: Mapped[str | None] = mapped_column(
-        ForeignKey("grupo.id_grupo", ondelete="SET NULL")
-    )
+    id_fruta: Mapped[str | None] = mapped_column(String(100), index=True)
     estacion: Mapped[str] = mapped_column(String(2), nullable=False)
     ts_estacion: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)
     ts_recepcion: Mapped[datetime] = mapped_column(
@@ -141,7 +135,6 @@ class Alerta(Base):
     id_lote: Mapped[str] = mapped_column(
         String(50), ForeignKey("lote.id_lote", ondelete="CASCADE"), nullable=False
     )
-    id_grupo: Mapped[str | None] = mapped_column(String(100))
     id_fruta: Mapped[str | None] = mapped_column(String(100))
     estacion: Mapped[str] = mapped_column(String(2), nullable=False)
     severidad: Mapped[str] = mapped_column(String(20), nullable=False)
@@ -165,5 +158,5 @@ class EventoCinta(Base):
     )
     estado_cinta: Mapped[str] = mapped_column(String(30), nullable=False)
     falla_mecanica: Mapped[bool] = mapped_column(Boolean, nullable=False)
-    id_grupo_en_cinta: Mapped[str | None] = mapped_column(String(100))
+    id_fruta_en_cinta: Mapped[str | None] = mapped_column(String(100))
     ts: Mapped[datetime] = mapped_column(UTCDateTime(), nullable=False)

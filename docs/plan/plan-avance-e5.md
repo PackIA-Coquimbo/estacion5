@@ -4,6 +4,8 @@
 
 > **Objetivo:** pasar de "API que valida" a **trazabilidad persistente por grupo y por fruta**, con un dashboard en vivo conectado al backend real, listo para la demostración final.
 
+> **Actualización de contrato (26 de noviembre de 2026):** este plan documenta la versión v2 por grupos y queda como registro histórico. La decisión posterior v3 es una mandarina por mensaje; prevalecen los JSON de [`docs/formato_datos/`](../formato_datos/README.md) y la [guía de integración de la API](../integracion/guia-api-e5.md). No implementar rutas ni campos `id_grupo`/`frutas[]` desde las secciones v2 de este plan.
+
 ---
 
 ## 0. Decisiones confirmadas (base de todo el plan)

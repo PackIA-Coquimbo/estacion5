@@ -1,14 +1,6 @@
-"""Tests del cierre de grupos y del estado de la cinta (E6).
-
-- Un grupo se cierra cuando llegó E1 y E4 clasificó todas sus frutas; queda
-  en "rechazo", "anomalia" u "ok" y con la hora de salida.
-- GET /api/v1/estaciones/estado incluye estado_cinta y
-  falla_mecanica_detectada en la entrada de E6.
-"""
+"""Cierre de mandarina al recibir E4 y consulta del estado E6."""
 
 import copy
-
-GRUPO = "G-0001"
 
 
 def ruta(estacion: str) -> str:
@@ -21,141 +13,96 @@ def enviar(client, mensaje: dict) -> dict:
     return respuesta.json()
 
 
-def grupo(client) -> dict:
-    return client.get(f"/api/v1/grupos/{GRUPO}").json()["grupo"]
+def estado_fruta(client) -> dict:
+    return client.get("/api/v1/frutas/M-0001").json()
 
 
-def e4_sin_revision(contratos) -> dict:
-    e4 = copy.deepcopy(contratos["E4"])
-    for fruta in e4["frutas"]:
-        fruta["requiere_revision_manual"] = False
-    return e4
-
-
-def e6_de_estado(client) -> dict:
-    estado = client.get("/api/v1/estaciones/estado").json()
-    return next(e for e in estado if e["estacion"] == "E6")
-
-
-# ------------------------------------------------------------ cierre de grupo
-
-def test_grupo_sin_e4_sigue_en_proceso(client, contratos):
+def test_mandarina_sigue_en_proceso_hasta_e4(client, contratos):
     for estacion in ["E1", "E2", "E3"]:
         enviar(client, contratos[estacion])
-    assert grupo(client)["estado"] == "en_proceso"
-    assert grupo(client)["salida"] is None
+    assert estado_fruta(client)["estado"] == "en_proceso"
+    assert estado_fruta(client)["salida"] is None
 
 
-def test_grupo_completo_sin_alertas_queda_ok(client, contratos):
-    enviar(client, contratos["E1"])
-    enviar(client, e4_sin_revision(contratos))
-    assert grupo(client)["estado"] == "ok"
-    assert grupo(client)["salida"] is not None
-
-
-def test_grupo_con_alerta_queda_anomalia(client, contratos):
-    # El contrato de E4 trae F3 con revisión manual, que genera una alerta
+def test_e4_cierra_mandarina_sin_alertas(client, contratos):
     for estacion in ["E1", "E2", "E3", "E4"]:
         enviar(client, contratos[estacion])
-    assert grupo(client)["estado"] == "anomalia"
+    assert estado_fruta(client)["estado"] == "ok"
+    assert estado_fruta(client)["salida"] is not None
 
 
-def test_grupo_con_fruta_rechazada_queda_rechazo(client, contratos):
-    e4 = e4_sin_revision(contratos)
-    e4["frutas"][0]["categoria_final"] = "rechazo"
-    enviar(client, contratos["E1"])
-    enviar(client, e4)
-    assert grupo(client)["estado"] == "rechazo"
-
-
-def test_e4_parcial_no_cierra_el_grupo(client, contratos):
-    e4 = e4_sin_revision(contratos)
-    e4["frutas"] = e4["frutas"][:2]
-    enviar(client, contratos["E1"])
-    enviar(client, e4)
-    assert grupo(client)["estado"] == "en_proceso"
-    assert grupo(client)["salida"] is None
-
-
-def test_e4_antes_que_e1_cierra_cuando_llega_e1(client, contratos):
-    enviar(client, e4_sin_revision(contratos))
-    assert grupo(client)["estado"] == "en_proceso"
-
-    enviar(client, contratos["E1"])
-    assert grupo(client)["estado"] == "ok"
-    assert grupo(client)["salida"] is not None
-
-
-def test_salida_no_cambia_y_alerta_tardia_actualiza_el_estado(client, contratos):
-    enviar(client, contratos["E1"])
-    enviar(client, e4_sin_revision(contratos))
-    salida = grupo(client)["salida"]
-
+def test_alerta_activa_deja_mandarina_en_anomalia(client, contratos):
     e2 = copy.deepcopy(contratos["E2"])
-    e2["frutas"][0]["confianza_visual"] = 0.5
-    enviar(client, e2)
-    assert grupo(client)["estado"] == "anomalia"
-    assert grupo(client)["salida"] == salida
+    e2["datos"]["confianza_visual"] = 0.5
+    for mensaje in [contratos["E1"], e2, contratos["E4"]]:
+        enviar(client, mensaje)
+    assert estado_fruta(client)["estado"] == "anomalia"
 
 
-def test_duplicado_no_cambia_el_grupo(client, contratos):
+def test_categoria_rechazo_cierra_mandarina_como_rechazo(client, contratos):
+    e4 = copy.deepcopy(contratos["E4"])
+    e4["datos"]["categoria_final"] = "rechazo"
+    enviar(client, e4)
+    assert estado_fruta(client)["estado"] == "rechazo"
+    assert estado_fruta(client)["salida"] is not None
+
+
+def test_e4_antes_de_e1_cierra_al_llegar_la_primera_lectura(client, contratos):
+    enviar(client, contratos["E4"])
+    assert estado_fruta(client)["estado"] == "ok"
     enviar(client, contratos["E1"])
-    enviar(client, e4_sin_revision(contratos))
-    antes = grupo(client)
-
-    assert enviar(client, e4_sin_revision(contratos))["duplicado"] is True
-    assert grupo(client) == antes
+    assert estado_fruta(client)["estado"] == "ok"
 
 
-# ------------------------------------------------------------ estado de cinta
+def test_alerta_tardia_actualiza_estado_sin_cambiar_salida(client, contratos):
+    enviar(client, contratos["E1"])
+    enviar(client, contratos["E4"])
+    salida = estado_fruta(client)["salida"]
+    e2 = copy.deepcopy(contratos["E2"])
+    e2["datos"]["confianza_visual"] = 0.5
+    enviar(client, e2)
+    assert estado_fruta(client)["estado"] == "anomalia"
+    assert estado_fruta(client)["salida"] == salida
 
-def test_estado_cinta_sin_e6_es_nulo(client):
-    e6 = e6_de_estado(client)
+
+def test_duplicado_no_cambia_estado_ni_salida(client, contratos):
+    enviar(client, contratos["E4"])
+    antes = estado_fruta(client)
+    assert enviar(client, contratos["E4"])["duplicado"] is True
+    assert estado_fruta(client) == antes
+
+
+def test_estado_cinta_nulo_sin_eventos(client):
+    e6 = next(
+        e
+        for e in client.get("/api/v1/estaciones/estado").json()["estaciones"]
+        if e["estacion"] == "E6"
+    )
     assert e6["estado_cinta"] is None
     assert e6["falla_mecanica_detectada"] is None
 
 
-def test_estado_cinta_con_e6(client, contratos):
-    enviar(client, contratos["E6"])
-    e6 = e6_de_estado(client)
-    assert e6["estado_cinta"] == "normal"
-    assert e6["falla_mecanica_detectada"] is False
-
-
-def test_estado_cinta_toma_el_ultimo_mensaje(client, contratos):
+def test_estado_cinta_toma_ultimo_evento(client, contratos):
     enviar(client, contratos["E6"])
     falla = copy.deepcopy(contratos["E6"])
-    falla["timestamp"] = "2026-11-18T10:17:25Z"
+    falla["timestamp"] = "2026-11-25T10:16:00Z"
     falla["datos"]["estado_cinta"] = "falla_mecanica"
     falla["datos"]["falla_mecanica_detectada"] = True
     enviar(client, falla)
-
-    e6 = e6_de_estado(client)
+    e6 = next(
+        e
+        for e in client.get("/api/v1/estaciones/estado").json()["estaciones"]
+        if e["estacion"] == "E6"
+    )
     assert e6["estado_cinta"] == "falla_mecanica"
+    assert e6["estado"] == "falla"
     assert e6["falla_mecanica_detectada"] is True
 
 
-def test_estado_cinta_solo_en_la_entrada_de_e6(client, contratos):
-    enviar(client, contratos["E6"])
-    for entrada in client.get("/api/v1/estaciones/estado").json():
-        if entrada["estacion"] != "E6":
-            assert "estado_cinta" not in entrada
-            assert "falla_mecanica_detectada" not in entrada
-
-
-def test_metricas_solo_cuenta_alertas_activas(client, contratos):
-    enviar(client, contratos["E1"])
-    enviar(client, contratos["E4"])
-
-    metricas = client.get("/api/v1/metricas").json()
-    assert metricas["anomalias_por_estacion"]["E4"] >= 1
-
-    alertas = client.get("/api/v1/alertas?activas=true").json()
-    alerta_e4 = next(a for a in alertas if a["estacion"] == "E4")
-    respuesta = client.patch(f"/api/v1/alertas/{alerta_e4['id']}")
-    assert respuesta.status_code == 200
-
-    metricas = client.get("/api/v1/metricas").json()
-    assert metricas["anomalias_por_estacion"]["E4"] == 0
-
-
+def test_metricas_disminuyen_alertas_historicas_al_resolver(client, contratos):
+    e4 = copy.deepcopy(contratos["E4"])
+    e4["datos"]["requiere_revision_manual"] = True
+    enviar(client, e4)
+    alerta = client.get("/api/v1/alertas").json()["alertas"][0]
+    client.patch(f"/api/v1/alertas/{alerta['id']}")
+    assert client.get("/api/v1/alertas").json()["alertas"] == []

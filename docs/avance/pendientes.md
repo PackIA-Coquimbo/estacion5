@@ -4,6 +4,19 @@
 
 > Lista de lo que queda por hacer, por rol, con la evidencia de cada punto. Al resolver uno, márcalo `[x]` y anota el PR. Los planes completos están en `docs/plan/`.
 
+## Actualización — 26 de noviembre de 2026
+
+La rama `feat/e5-api-v3-integracion` migra schemas, modelos SQLite, rutas,
+métricas, reglas, simulador y tests a los contratos v3 por mandarina. Las rutas
+de grupos de las secciones históricas siguientes ya no son la API vigente. La
+guía para adaptar E1–E6 está en
+[`docs/integracion/guia-api-e5.md`](../integracion/guia-api-e5.md).
+
+Pendiente después de esta rama: validar los cambios con los equipos de E1–E6,
+desplegar y probar en Raspberry Pi; entrenar el pronóstico con al menos 24 horas
+de historial real de E5. No se encontró una base SQLite v2 en este checkout y
+no se incluye migración automática de bases existentes.
+
 ---
 
 ## 1. Estado en 30 segundos
