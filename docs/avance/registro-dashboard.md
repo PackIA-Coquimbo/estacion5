@@ -5,6 +5,8 @@
 
 > **Para qué sirve este documento:** dejar por escrito qué se hizo en el dashboard, por qué, para qué sirve y qué falta, de modo que Gabriel (backend) y Maicol (integración) puedan entender el estado sin preguntar, y que cualquiera retome el trabajo con contexto. Se actualiza agregando entradas nuevas al final de la sección 4.
 
+> **Actualización (26 de noviembre de 2026):** la API de la rama `feat/e5-api-v3-integracion` entrega las rutas y formas de respuesta v3 esperadas por `frontend/api.js`. El dashboard principal todavía usa la simulación local: conectar `app.js` a `E5Api` sigue siendo una tarea separada. Los apartados históricos que hablan de grupos y contratos v2 no describen el contrato vigente.
+
 ---
 
 ## 1. Resumen en 30 segundos
