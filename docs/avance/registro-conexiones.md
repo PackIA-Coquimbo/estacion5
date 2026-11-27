@@ -1,7 +1,7 @@
 # Registro de avance — Conexiones de la línea
 
 **Jornadas:** 18, 25 y 27 de noviembre de 2026, en la universidad · **Plan que se sigue:** [`docs/plan/plan-conexiones.md`](../plan/plan-conexiones.md)
-**Última actualización:** 2026-11-27, durante la tercera jornada (hora de Chile)
+**Última actualización:** 2026-11-27, cierre de la tercera jornada (hora de Chile)
 
 > Registro de lo que se hizo en cada fase del plan de conexiones, lo que salió distinto a lo planeado y lo que falta. **Sin contraseñas.** Las claves se guardan en el grupo del equipo.
 
@@ -10,7 +10,7 @@
 ## 1. Resumen
 
 - ✅ **Fase 1 (router): lista, rehecha el 25 de noviembre.** Se olvidó la clave de administrador y hubo que volver a fábrica y configurarlo de nuevo (sección 3). Quedan por confirmar algunos ajustes (sección 6).
-- ⏳ **Fase 2 (Pi + API): en curso.** El 27 la Pi arrancó desde la microSD, quedó por cable con la IP fija `192.168.0.10` y se entró por SSH (pasos 2.1 a 2.5 listos). La primera actualización falló por errores de la microSD; se regrabó y la segunda salió bien. Docker en instalación; faltan la API y las pruebas (2.7 a 2.9).
+- ⏳ **Fase 2 (Pi + API): en curso.** El 27 la Pi arrancó desde la microSD, quedó por cable con la IP fija `192.168.0.10` y se entró por SSH (pasos 2.1 a 2.5 listos). Pero la **microSD resultó dañada**: falló dos veces al escribir (actualización e instalación de Docker) y quedó descartada. **Se retoma otro día con una microSD nueva**, repitiendo desde 2.1; la red y la reserva de la `.10` ya quedan listas.
 - Fases 3 a 7: pendientes.
 
 ## 2. Jornada 1 (18 de noviembre) — Router
@@ -77,7 +77,13 @@ En esa jornada no se avanzó con la Pi: no había lector de microSD y había un 
 | Recuperación | Se apagó la Pi a la fuerza y se **regrabó la microSD** con el Imager (mismos ajustes: `e5-pi`, `packia`, SSH). Windows ofreció "examinar y reparar bootfs" al ponerla; se omitió porque el Imager la borra entera. |
 | Segundo arranque | El primer inicio quedó en consola de texto con inicio de sesión automático y **sin red** (`hostname -I` vacío, `eth0` en `DOWN`). Con `sudo reboot` arrancó el escritorio y la red. |
 | 2.6 Actualización | ✅ `sudo apt update && sudo apt full-upgrade -y` terminó sin errores, desde la terminal de la propia Pi. `dmesg` sin errores de disco: tarjeta de 30 GiB detectada y montada en lectura y escritura. |
-| 2.6 Docker | ⏳ En curso: instalación de git y Docker (`get.docker.com`). |
+| 2.6 Docker | ❌ git se instaló, pero la instalación de Docker (`get.docker.com`) falló: `dpkg returned an error code (2)` y otra vez `Read-only file system`. |
+| Diagnóstico de la tarjeta | `mount` mostró la raíz en **`emergency_ro`** y `dmesg` mostró muchos `Buffer I/O error on device mmcblk0p2`, `Journal has aborted` y al final un `I/O error … (READ)`. **La microSD está dañada** (falla al escribir y ya también al leer). No es la fuente (5 A correcta), ni el cable, ni la configuración. |
+| Decisión | Se apagó la Pi y **se descartó la microSD** (marcarla como dañada para que nadie la reutilice). Se retoma otro día con **una microSD nueva**. |
+
+**Qué queda hecho y no hay que repetir:** router configurado, rango DHCP `.10 – .249`, reserva de `192.168.0.10` para la MAC de la Pi (va con la placa, no con la tarjeta) y respaldo del router del 27.
+
+**Qué hay que repetir con la tarjeta nueva:** 2.1 grabar con el Imager (Raspberry Pi 5, Raspberry Pi OS 64-bit, `e5-pi`, `packia`, SSH, `America/Santiago`) → 2.2 arrancar (si el primer inicio queda en consola sin red, `sudo reboot`) → comprobar `hostname -I` = `192.168.0.10` → `ssh-keygen -R 192.168.0.10` en el notebook antes de entrar por SSH → 2.6 actualización y Docker → 2.7 `.env` y API → 2.8 y 2.9 pruebas. Después de la actualización, revisar `dmesg | grep -iE "i/o error|ext4-fs error"`.
 
 ## 5. Material
 
@@ -92,8 +98,9 @@ En esa jornada no se avanzó con la Pi: no había lector de microSD y había un 
 
 | Pendiente | Prioridad |
 |---|---|
-| Terminar la Fase 2: Docker (2.6), `.env` con `API_BIND_ADDRESS=192.168.0.10` y API (2.7), pruebas 2.8 y 2.9. | Alta |
-| Tener una **microSD de repuesto** (32 GB o más, de marca, A1/A2) o un pendrive USB 3 grabado como respaldo: la tarjeta actual ya tuvo errores de escritura una vez. | Media |
+| **Conseguir una microSD nueva** de marca (SanDisk, Samsung o Kingston; 32 GB o más; A1/A2, U3). La anterior quedó dañada. | Alta |
+| Repetir la Fase 2 con la tarjeta nueva: 2.1, 2.2, 2.6 (actualización y Docker), 2.7 (`.env` con `API_BIND_ADDRESS=192.168.0.10` y API), pruebas 2.8 y 2.9. | Alta |
+| Más adelante: evaluar un **SSD por USB** para la Pi (más durable para Docker y la base de datos) y tener una segunda tarjeta o pendrive grabado como respaldo. | Media |
 | Confirmar que la **clave de administrador nueva** está en el grupo del equipo. | Alta |
 | Revisar en el router: reinicio programado desactivado y Hide SSID desactivado. | Media |
 | Anotar la versión del firmware del router. | Baja |
@@ -112,7 +119,7 @@ En esa jornada no se avanzó con la Pi: no había lector de microSD y había un 
 | Respaldo del router (fecha) | 2026-11-27, fuera del repo (el del 2026-11-18 quedó obsoleto) |
 | Versión del firmware del router | Sin anotar |
 | Equipo | Raspberry Pi 5 de **4 GB** de RAM (bootloader 2025-05-08), fuente oficial USB-PD de 5 A |
-| Sistema de la Pi | Raspberry Pi OS (64-bit) en la microSD, grabado el 2026-11-25 |
+| Sistema de la Pi | Pendiente: la microSD de 32 GB usada el 25 y el 27 quedó **dañada** (errores de E/S); se reemplaza por una nueva |
 | Hostname de la Pi | `e5-pi` |
 | Usuario de la Pi | `packia` |
 | MAC de la Pi (cable) | `2C:CF:67:24:38:7B` |

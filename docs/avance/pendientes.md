@@ -26,7 +26,7 @@ no se incluye migración automática de bases existentes.
 | Backend (A, Gabriel) | Migrado a **contratos v3** por mandarina (PR #21): schemas, modelos SQLite, rutas, métricas, reglas, simulador y tests; además pronóstico y respaldo SQLite. Falta validar con E1–E6 y probar en la Pi. |
 | Integración (B, Maicol) | Simulador, tests y Docker hechos desde el 13 de noviembre. Sin avances nuevos; quedan la coordinación con otras estaciones y la prueba en la Pi. |
 | Dashboard (C, Christian) | Pantalla terminada con datos simulados y servida por la API en `/` (PR #11 y #12). **Falta conectarla a la API**: las respuestas no tienen la forma que espera `api.js` (sección 4). |
-| Red de la línea | Fase 1 (router) lista (rehecha el 25/11). Fase 2 (Pi) **en curso**: microSD grabada pero aún no puesta en la Pi; falta un cable bueno. Ver `docs/avance/registro-conexiones.md`. |
+| Red de la línea | Fase 1 (router) lista (rehecha el 25/11). Fase 2 (Pi) **en curso**: red y reserva de `192.168.0.10` listas; la microSD quedó dañada el 27/11 y falta una nueva para instalar el sistema, Docker y la API. Ver `docs/avance/registro-conexiones.md`. |
 
 ## 1b. Cambio a una mandarina por pasada (contratos v3) — 25 de noviembre
 
@@ -88,12 +88,12 @@ Comparación de las respuestas reales con `frontend/mock/` (lo que espera el das
 Detalle en `docs/avance/registro-conexiones.md` y pasos en `docs/plan/plan-conexiones.md`.
 
 - [x] Fase 1 — Router configurado y respaldado.
-- [ ] **Fase 2 — Pi con la API** (en curso): microSD grabada el 25/11; falta ponerla en la Pi, conectarla con un cable bueno, SSH, reservar `192.168.0.10`, Docker, API y prueba de reinicio.
+- [ ] **Fase 2 — Pi con la API** (en curso): cable, reserva de `192.168.0.10` y respaldo del router listos el 27/11. La microSD quedó dañada; con una nueva falta grabar el sistema, actualizar, Docker, API y prueba de reinicio.
 - [ ] Fase 3 — Prueba de red con el simulador.
 - [ ] Fase 4 — Conectar las estaciones reales.
 - [ ] Fase 5 — Switch · Fase 6 — Tubos PVC · Fase 7 — Ensayo general.
 
-**Material que falta:** cables de red (hay 2 y uno está malo; falta al menos 1 bueno ahora y uno por estación después) y switch de 8 puertos.
+**Material que falta:** **microSD nueva** (32 GB o más, de marca, A1/A2), cables de red (uno por estación) y switch de 8 puertos.
 
 **Corrección hecha:** `docs/plan/conexion-estaciones.md` ya usa `192.168.0.10` (antes `192.168.10.10`).
 

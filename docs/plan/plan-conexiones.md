@@ -36,7 +36,7 @@
 |---|---|
 | Raspberry Pi 5 | ✅ Disponible |
 | Fuente oficial USB-C de 27 W para la Pi | ⏳ Por confirmar |
-| Tarjeta microSD de 32 GB | ✅ Disponible · se graba con un adaptador SD |
+| Tarjeta microSD de 32 GB | ❌ La que había quedó dañada el 27/11 (errores de E/S). Falta una nueva de marca (A1/A2) · se graba con un adaptador SD |
 | Router TP-Link Archer AX1800 (Wi-Fi 6, doble banda) con su fuente | ✅ Disponible |
 | Monitor | ✅ Disponible |
 | Cable micro-HDMI a HDMI | ✅ Disponible |
